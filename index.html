@@ -711,6 +711,22 @@ function addRim(mat,col,str){if(!mat||mat.userData.rim)return;mat.userData.rim=1
 const RING_N=320,ringIM=(()=>{const g=new THREE.RingGeometry(.4,.56,28);g.rotateX(-Math.PI/2);const m=new THREE.InstancedMesh(g,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.62,depthWrite:false,toneMapped:false}),RING_N);
   m.instanceColor=new THREE.InstancedBufferAttribute(new Float32Array(RING_N*3),3);m.count=0;m.frustumCulled=false;m.renderOrder=2;scene.add(m);return m})();
 const _rd=new THREE.Object3D(),_rc=new THREE.Color();
+/* ===== v10: buildings fade when they stand between the camera and your warriors ===== */
+const OCC={list:[],t:0,ray:new THREE.Ray(),v:new THREE.Vector3(),hit:new THREE.Vector3()};
+const OCC_SKIP=/^(flag|fence|rock|hill|wall_straight|resource|crate|barrel|sack|bucket|cloud|projectile|mountain)/;
+function occScan(){const out=[];const seen=new Set();const visit=(o,d)=>{if(!o||d>3)return;for(const c of o.children){if(c.userData&&c.userData.kit&&c.userData.h>1.1&&!OCC_SKIP.test(c.userData.kit)){if(!seen.has(c)){seen.add(c);out.push(c)}}else visit(c,d+1)}};
+  visit(world,0);visit(dyn,0);if(keep&&keep.g)visit(keep.g,0);
+  const old=new Map(OCC.list.map(e=>[e.o,e]));OCC.list=out.map(o=>{const e=old.get(o)||{o,op:1,box:new THREE.Box3()};o.updateMatrixWorld(true);e.box.setFromObject(o);e.box.expandByScalar(-.08);return e});
+  for(const [o,e] of old)if(!seen.has(o)&&e.op<1)occSet(e,1)}
+function occSet(e,op){e.op=op;e.o.traverse(m=>{if(!m.isMesh)return;if(op>=.999){if(m.userData.occOrig){m.material=m.userData.occOrig;m.userData.occOrig=null;m.castShadow=true}return}
+    if(!m.userData.occOrig){m.userData.occOrig=m.material;m.material=m.material.clone();m.material.transparent=true}m.material.opacity=op;m.material.depthWrite=op>.7})}
+function updOcclusion(dt){if(!S||!H)return;OCC.t-=dt;if(OCC.t<=0){OCC.t=.75;occScan()}if(!OCC.list.length)return;
+  const cam=camera.position,tg=[H];const hp=H.g.position;for(const u of soldiers){if(tg.length>18)break;if(u.alive&&Math.abs(u.g.position.x-hp.x)<14&&Math.abs(u.g.position.z-hp.z)<12)tg.push(u)}
+  for(const e of enemies){if(tg.length>30)break;if(e.alive&&(e.boss||e.elite))tg.push(e)}
+  for(const e of OCC.list)e.want=1;
+  for(const u of tg){if(!u.alive||!u.g.visible)continue;const p=u.g.position;OCC.v.set(p.x,.7*(u.scale||1),p.z);const d=OCC.v.distanceTo(cam);OCC.ray.origin.copy(cam);OCC.ray.direction.copy(OCC.v).sub(cam).normalize();
+    for(const e of OCC.list){if(e.want<1)continue;if(OCC.ray.intersectBox(e.box,OCC.hit)&&OCC.hit.distanceTo(cam)<d-.2)e.want=.26}}
+  for(const e of OCC.list){if(Math.abs(e.op-e.want)<.01)continue;const n=e.op+(e.want-e.op)*Math.min(1,dt*9);occSet(e,Math.abs(n-e.want)<.02?e.want:n)}}
 function teamRings(){let n=0;const add=(u,col,sc)=>{if(n>=RING_N||!u||!u.alive||!u.g.visible||!u.g.parent)return;const p=u.g.position;_rd.position.set(p.x,.035,p.z);_rd.scale.setScalar(sc);_rd.updateMatrix();ringIM.setMatrixAt(n,_rd.matrix);ringIM.setColorAt(n,_rc.setHex(col));n++};
   if(S&&!S.over){if(H)add(H,0xffd23a,1.35+Math.sin(performance.now()/260)*.06);for(const s of soldiers)add(s,0x3d9bff,s.type==='cavalry'?1.55:s.type==='knight'?1.15:1);
     for(const e of enemies)add(e,e.boss?0xff2020:e.elite?0xc04dff:0xff4a32,e.boss?e.scale*.95:(e.rad||.4)*2.2)}
@@ -846,7 +862,7 @@ function applySquadSkin(){if(!ASSETS_READY)return;const B=BK.soldier;const sid=e
 /* ---- kit buildings ---- */
 function kitModel(name,w){const src=KITROOT.getObjectByName(name);const holder=new THREE.Group();if(!src){holder.userData.h=1;return holder}
   const o=src.clone(true);o.position.set(0,0,0);o.rotation.set(0,0,0);o.scale.set(1,1,1);o.updateMatrixWorld(true);const bb=new THREE.Box3().setFromObject(o);const sz=bb.getSize(new THREE.Vector3());
-  const k=w/Math.max(sz.x,sz.z);o.scale.setScalar(k);o.position.set(-(bb.min.x+bb.max.x)/2*k,-bb.min.y*k,-(bb.min.z+bb.max.z)/2*k);holder.add(o);holder.userData.h=sz.y*k;shadowify(holder);return holder}
+  const k=w/Math.max(sz.x,sz.z);o.scale.setScalar(k);o.position.set(-(bb.min.x+bb.max.x)/2*k,-bb.min.y*k,-(bb.min.z+bb.max.z)/2*k);holder.add(o);holder.userData.h=sz.y*k;holder.userData.kit=name;shadowify(holder);return holder}
 function archerUnit(parent,x,y,z){const g=new THREE.Group();g.position.set(x,y,z);parent.add(g);const rig=new THREE.Group();rig.rotation.order='YXZ';g.add(rig);
   g.userData.u={kind:'soldier',g,rig,alive:true,anim:0,mv:0,flash:0,atkT:9,seed:Math.random(),bk:BK.soldier,tint:null};g.scale.setScalar(.82);return g}
 const TOPF={building_tower_A_blue:[.6,.36],building_tower_B_blue:[.67,.36],building_tower_base_blue:[.97,.22]};
@@ -1991,7 +2007,7 @@ function frame(now){requestAnimationFrame(frame);let dt=(now-last)/1000;last=now
     if(!S.over){updHero(dt);updSquad(dt);updEnemies(dt);updStructures(dt);updPads(dt);updWave(dt);updQuests(dt);updAbility(dt);updGuide();updTut();updAudioFrame();updGems(dt);updDrops(dt);updChests(dt);updFury(dt);
       S.comboT-=dt;if(S.phase==='wave'&&keep.hp<keep.max*.3&&!S.keepWarn){S.keepWarn=true;banner('המבצר בסכנה!','חזור להגן עליו',2);buzz([100,60,100]);say('danger',2);sfx.wave()}}
     else{S.overT-=dt;updEnemies(dt);if(S.overT<=0&&$('overO').hidden&&$('menu').hidden)showOver()}
-    updKnock(dt);updProjs(dt);updCoins(dt);updParts(dt);updRings(dt);updBolts(dt);updDying(dt);updPortals();updStack();updCamera(dt);updHud();
+    updKnock(dt);updOcclusion(rdt);updProjs(dt);updCoins(dt);updParts(dt);updRings(dt);updBolts(dt);updDying(dt);updPortals();updStack();updCamera(dt);updHud();
     if(S.pendingPerks>0&&!S.over){S.perkDelay-=dt;if(S.perkDelay<=0)openPerks()}
     if(bannerT>0){bannerT-=dt;if(bannerT<=0)$('banner').classList.remove('on')}
   }else if(!S||S.over&&!$('menu').hidden){const t=now/1000;camera.position.set(Math.sin(t*.1)*5,11,13);camera.lookAt(0,1.2,3);sun.position.set(-12,32,18);sun.target.position.set(0,0,2)}
@@ -2016,7 +2032,7 @@ requestAnimationFrame(frame);
   try{if(!(THREE.GLTFLoader&&THREE.SkeletonUtils))throw new Error('no loader');await loadAssets(p=>{bar.style.width=Math.round(p*100)+'%'},t=>{txt.textContent=t});
     decorateWorld();preview();}catch(e){console.warn('assets fallback',e)}
   try{makePortraits()}catch(e){}renderMenu();$('loadO').hidden=true})();
-window.__AUD=AUD;window.__game={openPerksT:()=>{S.pendingPerks=(S.pendingPerks||0)+1;openPerks()},renderer,camera,killKeep:()=>hurtKeep(1e7),setCam:(y,z)=>{camDist={y,z}},applyTheme,useAbility,heroDef,openChest,spawnChest:(t)=>spawnChest(H.g.position.x+2,H.g.position.z,t),spawnGoblin:()=>spawnGoblin(),spawnDrop:()=>spawnDrop(),startFury:()=>startFury(),IP,iconShot:(k,w,h)=>{const r=new THREE.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});r.outputEncoding=THREE.sRGBEncoding;r.toneMapping=THREE.ACESFilmicToneMapping;r.toneMappingExposure=1.05;r.setPixelRatio(1);r.setSize(w,h);const sc=new THREE.Scene();sc.add(new THREE.HemisphereLight(0xfff3dc,0x6b5a3a,.95));const dl=new THREE.DirectionalLight(0xffffff,.7);dl.position.set(2,4,5);sc.add(dl);const cam=new THREE.PerspectiveCamera(26,w/h,.1,50);const g=modelGroup(k);g.rotation.y=-.35;sc.add(g);const bb=new THREE.Box3().setFromObject(g);const hh=bb.max.y-bb.min.y;cam.position.set(0,bb.min.y+hh*.55,hh*2.55);cam.lookAt(0,bb.min.y+hh*.5,0);r.render(sc,cam);return r.domElement.toDataURL('image/png')},get S(){return S},get enemies(){return enemies},get pads(){return pads},get H(){return H},get soldiers(){return soldiers},input,forceWave:()=>{if(S)S.breakT=0},addSoldier:(t)=>addSoldier(t,H.g.position.x+rand(-2,2),H.g.position.z+rand(-1,1)),spawn:(k)=>spawnEnemy(k,0,0,0,[H.g.position.x+3,H.g.position.z-3])};
+window.__AUD=AUD;window.__game={OCC,openPerksT:()=>{S.pendingPerks=(S.pendingPerks||0)+1;openPerks()},renderer,camera,killKeep:()=>hurtKeep(1e7),setCam:(y,z)=>{camDist={y,z}},applyTheme,useAbility,heroDef,openChest,spawnChest:(t)=>spawnChest(H.g.position.x+2,H.g.position.z,t),spawnGoblin:()=>spawnGoblin(),spawnDrop:()=>spawnDrop(),startFury:()=>startFury(),IP,iconShot:(k,w,h)=>{const r=new THREE.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});r.outputEncoding=THREE.sRGBEncoding;r.toneMapping=THREE.ACESFilmicToneMapping;r.toneMappingExposure=1.05;r.setPixelRatio(1);r.setSize(w,h);const sc=new THREE.Scene();sc.add(new THREE.HemisphereLight(0xfff3dc,0x6b5a3a,.95));const dl=new THREE.DirectionalLight(0xffffff,.7);dl.position.set(2,4,5);sc.add(dl);const cam=new THREE.PerspectiveCamera(26,w/h,.1,50);const g=modelGroup(k);g.rotation.y=-.35;sc.add(g);const bb=new THREE.Box3().setFromObject(g);const hh=bb.max.y-bb.min.y;cam.position.set(0,bb.min.y+hh*.55,hh*2.55);cam.lookAt(0,bb.min.y+hh*.5,0);r.render(sc,cam);return r.domElement.toDataURL('image/png')},get S(){return S},get enemies(){return enemies},get pads(){return pads},get H(){return H},get soldiers(){return soldiers},input,forceWave:()=>{if(S)S.breakT=0},addSoldier:(t)=>addSoldier(t,H.g.position.x+rand(-2,2),H.g.position.z+rand(-1,1)),spawn:(k)=>spawnEnemy(k,0,0,0,[H.g.position.x+3,H.g.position.z-3])};
 })();
 </script>
 
