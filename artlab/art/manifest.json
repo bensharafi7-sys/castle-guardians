@@ -1,6 +1,6 @@
 {
   "_doc": "Art track manifest. Every slot needs a file + license. Supported: .glb / .gltf / .json (embedded glTF) / .fbx for models; .jpg/.png/.webp for textures; HDRI as {type:'rgbe-hdr',data:base64} json or .hdr",
-  "warrior": { "file": "dwarf_warrior_hq.json", "license": "CC BY 4.0 — \"Dwarf Warrior\" by Northcliffe (Sketchfab), glTF by J-Ponzo", "height": 1.75, "rawHeight": 3.8, "anims": { "idle": "Idle", "attack": "Attack" } },
+  "warrior": { "file": "dwarf.model.json", "license": "CC BY 4.0 — \"Dwarf Warrior\" by Northcliffe (Sketchfab), glTF by J-Ponzo", "height": 1.75, "rawHeight": 3.8, "anims": { "idle": "Idle", "attack": "Attack" } },
   "enemy":   { "file": null, "license": null, "height": 1.8, "anims": { "idle": "Idle", "attack": "Attack" }, "stand_in": "recolor-of-warrior" },
   "hdri":    { "file": "noon_grass_1k.json", "license": "CC0 — Poly Haven \"Noon Grass\"" },
   "terrain": {

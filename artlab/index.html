@@ -13,12 +13,13 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px/1
 #rep.on{display:block}#rep h3{margin:0 0 6px;font-size:14px}#rep table{border-collapse:collapse;width:100%}#rep td{padding:4px 6px;border-bottom:1px solid rgba(255,255,255,.08);vertical-align:top;font-size:12.5px}
 #rep .ok{color:var(--ok)}#rep .bad{color:var(--bad)}#rep .lic{color:var(--muted);font-size:11px;direction:ltr;text-align:left}
 #load{position:fixed;inset:0;display:grid;place-items:center;background:var(--bg);z-index:9;font:600 15px system-ui;color:var(--muted)}
+#who{position:fixed;right:12px;bottom:calc(max(12px,env(safe-area-inset-bottom)) + 40px);z-index:5;background:var(--panel);padding:8px 12px;border-radius:10px;font:600 12.5px/1.6 system-ui}#who .ok{color:var(--ok)}#who .bad{color:var(--bad)}
 #stat{position:fixed;right:12px;bottom:12px;z-index:5;background:var(--panel);padding:6px 10px;border-radius:8px;font:12px ui-monospace,monospace;color:var(--muted);direction:ltr}
 </style></head><body>
 <div id="load">טוען נכסים איכותיים…</div>
 <canvas id="c"></canvas>
 <div class="bar"><span class="t">ART LAB · SEMI-REALISTIC</span>
-  <button id="bGame" class="on">מצלמת משחק</button><button id="bClose">תקריב לוחם</button><button id="bEnemy">תקריב אויב</button><button id="bRep">דוח נכסים</button></div>
+  <button id="bGame">מצלמת משחק</button><button id="bClose" class="on">תקריב לוחם</button><button id="bEnemy">תקריב אויב</button><button id="bRep">דוח נכסים</button></div>
 <div id="rep"></div><div id="stat"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
@@ -63,6 +64,8 @@ async function loadTex(url,srgb){return new Promise((res,rej)=>new THREE.Texture
 
 /* ---------- model loading (glTF / embedded json / FBX) ---------- */
 async function loadModel(file){const url=BASE+file;
+  if(/\.model\.json$/i.test(file)){const r=await fetch(url);if(!r.ok)throw new Error('HTTP '+r.status+' '+file);const j=await r.json();const bin=Uint8Array.from(atob(j.data),c=>c.charCodeAt(0));
+    return new Promise((res,rej)=>new THREE.GLTFLoader().parse(bin.buffer,BASE,res,e=>rej(new Error('GLTF: '+(e&&e.message||e)))))}
   if(/\.fbx$/i.test(file))return new Promise((res,rej)=>new THREE.FBXLoader().load(url,o=>res({scene:o,animations:o.animations||[]}),undefined,rej));
   return new Promise((res,rej)=>new THREE.GLTFLoader().load(url,g=>res(g),undefined,rej))}
 async function loadHDR(file){const url=BASE+file;const L=new THREE.RGBELoader();L.setDataType(THREE.UnsignedByteType);
@@ -139,11 +142,11 @@ function loopFight(a,b){const ai=a.act('Idle'),aa=a.act('Attack'),bi=b.act('Idle
   return dt=>{t+=dt;if(t>2.2){t=0;turn^=1;const [I,A]=turn?[ai,aa]:[bi,ba];if(A&&I){A.reset();A.setLoop(THREE.LoopOnce,1);A.clampWhenFinished=false;A.crossFadeFrom(I,.18,false);A.play();setTimeout(()=>{I.reset();I.play();I.crossFadeFrom(A,.25,false)},A.getClip().duration*1000-250)}}}}
 
 /* ---------- boot ---------- */
-let fight=null,mode='game',W=null,E=null;const sun=new THREE.DirectionalLight(0xfff0d8,2.1);
+let fight=null,mode='close',W=null,E=null;const sun=new THREE.DirectionalLight(0xfff0d8,2.1);
 (async()=>{let man={};try{man=await (await fetch(BASE+'manifest.json',{cache:'no-store'})).json()}catch(e){}
   // lighting: real HDRI image-based lighting + key sun with soft shadows
   try{if(!man.hdri||!man.hdri.file)throw 0;const hdr=await loadHDR(man.hdri.file);const pm=new THREE.PMREMGenerator(renderer);const env=pm.fromEquirectangular(hdr).texture;scene.environment=env;
-    hdr.mapping=THREE.EquirectangularReflectionMapping;scene.background=hdr;rep('תאורת סביבה HDRI',true,man.hdri.file,man.hdri.license)}
+    scene.background=new THREE.Color(0xb7c6d3);rep('תאורת סביבה HDRI',true,man.hdri.file,man.hdri.license)}
   catch(e){scene.background=new THREE.Color(0x9fb3c8);scene.add(new THREE.HemisphereLight(0xdfe9ff,0x4a4030,1));rep('תאורת סביבה HDRI',false,'חסר קובץ HDRI — תאורה בסיסית',null)}
   scene.fog=new THREE.Fog(0xb9c7d2,38,95);
   sun.position.set(-14,26,12);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-22,right:22,top:22,bottom:-22,near:1,far:80});sun.shadow.bias=-.0004;sun.shadow.normalBias=.03;scene.add(sun,sun.target);
@@ -156,13 +159,16 @@ let fight=null,mode='game',W=null,E=null;const sun=new THREE.DirectionalLight(0x
   for(const k of['tree','building'])if(!(props[k]&&props[k].file))rep(k==='tree'?'עצים':'מבנים',false,'חסר מודל — לא הוצב דבר (במקום להציב נכס מצויר)',null);
   // characters
   try{const w=man.warrior;const g=await loadModel(w.file);W=prepCharacter(g,w.height||1.75,{raw:w.rawHeight});W.holder.position.set(-.85,heightAt(-.85,0),.2);W.holder.rotation.y=Math.PI/2-.25;scene.add(W.holder);
-    const miss=['idle','attack'].filter(k=>!W.clips[(w.anims||{})[k]]);rep('לוחם',!miss.length,w.file+(miss.length?' (חסר: '+miss.join(',')+')':' · אנימציות: '+Object.keys(W.clips).join(', ')),w.license)}catch(e){rep('לוחם',false,'הקובץ לא נטען',null)}
+    const miss=['idle','attack'].filter(k=>!W.clips[(w.anims||{})[k]]);rep('לוחם',!miss.length,w.file+(miss.length?' (חסר: '+miss.join(',')+')':' · אנימציות: '+Object.keys(W.clips).join(', ')),w.license)}catch(e){rep('לוחם',false,'הקובץ לא נטען: '+(e&&e.message||e),null);console.error(e)}
   try{const en=man.enemy||{};if(en.file){const g=await loadModel(en.file);E=prepCharacter(g,en.height||1.8);rep('אויב',true,en.file,en.license)}
     else{const g=await loadModel(man.warrior.file);E=prepCharacter(g,(en.height||1.8),{raw:man.warrior.rawHeight,tint:0x5a3a3a,emis:0x220000});rep('אויב',false,'חסר מודל אויב מורשה — מוצג מציין מקום: הלוחם בצביעה כהה',null)}
-    E.holder.position.set(1.05,heightAt(1.05,-.2),-.35);E.holder.rotation.y=-Math.PI/2-.25;scene.add(E.holder)}catch(e){rep('אויב',false,'שגיאה',null)}
-  if(W&&E)fight=loopFight(W,E);
-  renderReport();$('load').remove();setMode('game')})();
+    E.holder.position.set(1.05,heightAt(1.05,-.2),-.35);E.holder.rotation.y=-Math.PI/2-.25;scene.add(E.holder)}catch(e){rep('אויב',false,'שגיאה: '+(e&&e.message||e),null);console.error(e)}
+  if(W&&E)fight=loopFight(W,E);else if(W){const i=W.act('Idle');i&&i.play()}
+  hudLine();
+  renderReport();$('load').remove();setMode(new URLSearchParams(location.search).get('mode')||'close')})();
 
+function hudLine(){const el=document.createElement('div');el.id='who';const w=REPORT.find(r=>r.slot==='לוחם'),e=REPORT.find(r=>r.slot==='אויב');
+  el.innerHTML=(w&&w.ok?'<span class=ok>✓ לוחם: Dwarf Warrior · אנימציות אמיתיות</span>':'<span class=bad>✗ לוחם לא נטען</span>')+'<br>'+(e&&e.ok?'<span class=ok>✓ אויב נטען</span>':'<span class=bad>✗ אויב: חסר מודל — מוצג מציין מקום</span>');document.body.appendChild(el)}
 function renderReport(){const ok=REPORT.filter(r=>r.ok).length;$('rep').innerHTML='<h3>דוח נכסים · '+ok+' מתוך '+REPORT.length+' מוכנים</h3><table>'+REPORT.map(r=>'<tr><td class="'+(r.ok?'ok':'bad')+'">'+(r.ok?'✓':'✗')+' '+r.slot+'</td><td>'+r.detail+(r.lic?'<div class="lic">'+r.lic+'</div>':'')+'</td></tr>').join('')+'</table>'}
 function setMode(m){mode=m;for(const [id,k] of[['bGame','game'],['bClose','close'],['bEnemy','enemy']])$(id).classList.toggle('on',k===m)}
 $('bGame').onclick=()=>setMode('game');$('bClose').onclick=()=>setMode('close');$('bEnemy').onclick=()=>setMode('enemy');$('bRep').onclick=()=>$('rep').classList.toggle('on');
@@ -172,7 +178,7 @@ let last=performance.now(),orbit=0,fpsN=0,fpsT=0,fps=0;const tgt=new THREE.Vecto
 function frame(now){requestAnimationFrame(frame);const dt=Math.min(.05,(now-last)/1000);last=now;WIND.value=now/1000;for(const m of MIX)m.update(dt);if(fight)fight(dt);
   orbit+=dt*.18;const fixed=q.get('t');if(fixed!=null)orbit=+fixed;
   if(mode==='game'){tgt.set(0,0,0);cpos.set(0,9.2,7.2)}
-  else{const who=mode==='enemy'&&E?E:W;const p=who?who.holder.position:new THREE.Vector3();const a=(mode==='enemy'?-.9:.9)+Math.sin(orbit)*.5;tgt.set(p.x,p.y+.95,p.z);cpos.set(p.x+Math.sin(a)*3.4,p.y+1.55,p.z+Math.cos(a)*3.4)}
+  else{const who=mode==='enemy'&&E?E:W;const p=who?who.holder.position:new THREE.Vector3();const a=(mode==='enemy'?-.9:.9)+orbit;tgt.set(p.x,p.y+.95,p.z);cpos.set(p.x+Math.sin(a)*3.4,p.y+1.55,p.z+Math.cos(a)*3.4)}
   camera.position.lerp(cpos,mode==='game'?1:Math.min(1,dt*3+.02));camera.lookAt(tgt);sun.target.position.set(tgt.x,0,tgt.z);sun.position.set(tgt.x-14,26,tgt.z+12);
   renderer.render(scene,camera);fpsN++;fpsT+=dt;if(fpsT>1){fps=fpsN/fpsT;fpsN=0;fpsT=0;const i=renderer.info.render;$('stat').textContent=fps.toFixed(0)+' fps · '+i.calls+' calls · '+(i.triangles/1000).toFixed(0)+'k tris'}}
 requestAnimationFrame(frame);
