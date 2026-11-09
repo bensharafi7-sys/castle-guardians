@@ -764,7 +764,7 @@ const BSPEC={soldier:{file:'c_Rogue_Hooded',hide:['Knife_Offhand','2H_Crossbow',
 const K2B={cavalry:'horse',soldier:'soldier',knight:'knight',grunt:'minion',runner:'srogue',brute:'warrior',boss:'warrior',shield:'warriorS',warlord:'warriorS',earcher:'smage',bomber:'minionB',goblin:'srogue'};
 const TINT={boss:[1.3,.75,.7],warlord:[1.05,.72,1.35],bomber:[.62,.62,.7],goblin:[1.75,1.35,.4]};
 const bakeOf=k=>ASSETS_READY&&K2B[k]?BK[K2B[k]]:null;
-function decodeAttr(a){const n=a.count,sz=a.itemSize,out=new Float32Array(n*sz);for(let i=0;i<n;i++){out[i*sz]=a.getX(i);if(sz>1)out[i*sz+1]=a.getY(i);if(sz>2)out[i*sz+2]=a.getZ(i);if(sz>3)out[i*sz+3]=a.getW(i)}
+function decodeAttr(a,raw){const n=a.count,sz=a.itemSize,out=new Float32Array(n*sz);for(let i=0;i<n;i++){out[i*sz]=a.getX(i);if(sz>1)out[i*sz+1]=a.getY(i);if(sz>2)out[i*sz+2]=a.getZ(i);if(sz>3)out[i*sz+3]=a.getW(i)}
   if(a.normalized){const A=a.array||(a.data&&a.data.array);const d=A instanceof Int8Array?127:A instanceof Uint8Array?255:A instanceof Int16Array?32767:A instanceof Uint16Array?65535:1;if(d!==1)for(let i=0;i<out.length;i++)out[i]=Math.max(-1,out[i]/d)}return out}
 const LMAT=new Map();
 function lambertOf(m,skinning){const key=m.uuid+(skinning?'s':'');if(LMAT.has(key))return LMAT.get(key);const l=new THREE.MeshLambertMaterial({map:m.map||null,color:m.color?m.color.clone():0xffffff,transparent:!!m.transparent,alphaTest:m.alphaTest||0,side:m.side,skinning:!!skinning});LMAT.set(key,l);return l}
@@ -774,7 +774,7 @@ async function loadAssets(onP,onT){const L=new THREE.GLTFLoader();const files=['
   await Promise.all(files.map(f=>new Promise((res,rej)=>L.load('assets/'+f+(window.__PWA?'.glb':'.json'),g=>{GL[f]=g;done++;onP(done/tot);res()},undefined,rej))));
   KITROOT=GL.kit.scene;toLambert(KITROOT);KITROOT.updateMatrixWorld(true);WEAP=GL.weapons.scene;
   try{onT('בודק מודלים מקצועיים...');await loadCustomModels(L)}catch(e){console.warn('custom models',e)}
-  onT('מכין אנימציות...');for(const k in BSPEC){if(!BSPEC[k]._s){BSPEC[k]._s=1;BSPEC[k].h*=1.12}BK[k]=bake(BSPEC[k]);addRim(BK[k].mat,ENEMY_BK.has(k)?0xff5a3c:0x7cc4ff,ENEMY_BK.has(k)?.55:.5);done++;onP(done/tot);await new Promise(r=>setTimeout(r,0))}
+  onT('מכין אנימציות...');for(const k in BSPEC){if(!BSPEC[k]._s){BSPEC[k]._s=1;BSPEC[k].h*=1.12}BK[k]=bake(BSPEC[k]);addRim(BK[k].mat,ENEMY_BK.has(k)?0xff5a3c:0x7cc4ff,BSPEC[k].pbr?.16:ENEMY_BK.has(k)?.55:.5);done++;onP(done/tot);await new Promise(r=>setTimeout(r,0))}
   ASSETS_READY=true}
 /* ===== v10c: drop-in professional character models (GLB with rig + animations) =====
    assets/custom/models.json → {"units":{"knight":{"file":"my_knight","height":1.4,"rotateY":0,"anims":{"idle":"Idle","move":"Run","atk":"Attack","die":"Death"},"hide":[]}},
@@ -788,28 +788,43 @@ async function loadCustomModels(L){const q=location.search;const demo=/[?&]demo=
       const url='assets/custom/'+(/\.(glb|gltf|json)$/i.test(d.file)?d.file:d.file+(window.__PWA?'.glb':'.json'));
       let g;try{g=await new Promise((res,rej)=>L.load(url,res,undefined,rej))}catch(e){ent.status='הקובץ לא נמצא';continue}
       g.animations.forEach(c=>{c.name=c.name.split('|').pop()});ent.clips=g.animations.map(c=>c.name);
-      const A=Object.assign({},d.anims||{});const need=['idle','move','atk','die'];for(const k of need)if(!A[k]||!ent.clips.includes(A[k]))ent.missing.push(k);
+      const A=Object.assign({},d.anims||{});const proc={};for(const k in A){const v=A[k];if(typeof v==='string'&&v[0]==='@'){const [mode,base]=v.slice(1).split(':');if(PROC[mode]){A[k]=base;proc[k]=PROC[mode];ent.proc=(ent.proc||[]).concat(k+'←'+mode)}}}
+      const need=['idle','move','atk','die'];for(const k of need)if(!A[k]||!ent.clips.includes(A[k]))ent.missing.push(k);
       if(group==='heroes'&&(!A.cast||!ent.clips.includes(A.cast)))A.cast=A.atk;
       let skinned=false;g.scene.traverse(o=>{if(o.isSkinnedMesh)skinned=true});if(!skinned){ent.status='אין שלד (Rig)';continue}
       if(ent.missing.length){ent.status='חסרות אנימציות';continue}
       GL['custom:'+key]=g;const rot=(d.rotateY||0)*Math.PI/180;
-      if(group==='units')BSPEC[key]=Object.assign({},tgt,{file:'custom:'+key,a:A,h:d.height||tgt.h,hide:d.hide||[],w:null,pose:d.pose||null,ref:d.moveRef||tgt.ref,rotY:rot,_s:0});
+      if(group==='units')BSPEC[key]=Object.assign({},tgt,{file:'custom:'+key,a:A,h:d.height||tgt.h,hide:d.hide||[],w:null,pose:d.pose||null,ref:d.moveRef||tgt.ref,rotY:rot,_s:0,pbr:!!d.pbr,proc});
       else HSPEC[key]=Object.assign({},tgt,{file:'custom:'+key,anims:A,h:d.height||tgt.h,hide:d.hide||[],rotY:rot});
       ent.status='פעיל'}}
   if(/[?&]models/.test(q)||demo)showModelReport()}
 function rotGeos(geos,a){const c=Math.cos(a),s=Math.sin(a);const done=new Set();for(const g of geos){const P=g.attributes.position,N=g.attributes.normal;if(!done.has(P)){done.add(P);for(let i=0;i<P.count;i++){const x=P.getX(i),z=P.getZ(i);P.setX(i,c*x+s*z);P.setZ(i,-s*x+c*z)}P.needsUpdate=true}
     if(N&&!done.has(N)){done.add(N);for(let i=0;i<N.count;i++){const x=N.getX(i),z=N.getZ(i);N.setX(i,Math.round(c*x+s*z));N.setZ(i,Math.round(-s*x+c*z))}N.needsUpdate=true}}}
 function showModelReport(){let el=document.getElementById('modelRep');if(!el){el=document.createElement('div');el.id='modelRep';document.body.appendChild(el);el.onclick=()=>el.remove()}
-  const rows=CUSTOM.entries.map(e=>'<tr><td>'+e.key+'</td><td>'+e.file+'</td><td class="'+(e.status==='פעיל'?'ok':'bad')+'">'+(e.status==='פעיל'?'✓ ':'✗ ')+e.status+(e.missing.length?' ('+e.missing.join(', ')+')':'')+'</td><td class="cl">'+e.clips.join(' · ')+'</td></tr>').join('');
+  const rows=CUSTOM.entries.map(e=>'<tr><td>'+e.key+'</td><td>'+e.file+'</td><td class="'+(e.status==='פעיל'?'ok':'bad')+'">'+(e.status==='פעיל'?'✓ ':'✗ ')+e.status+(e.missing.length?' ('+e.missing.join(', ')+')':'')+(e.proc?'<br><small style="display:inline;opacity:.7">פרוצדורלי: '+e.proc.join(', ')+'</small>':'')+'</td><td class="cl">'+e.clips.join(' · ')+'</td></tr>').join('');
   el.innerHTML='<b>מודלים מקצועיים'+(CUSTOM.src?' · '+CUSTOM.src+'.json':'')+'</b>'+(rows?'<table><tr><th>יחידה</th><th>קובץ</th><th>מצב</th><th>אנימציות בקובץ</th></tr>'+rows+'</table>':'<p>לא נמצא assets/custom/models.json — המשחק משתמש במודלים המובנים.</p>')+'<small>נגיעה לסגירה</small>'}
+let _env=null;function envTex(){if(_env)return _env;const pm=new THREE.PMREMGenerator(renderer);const sc=new THREE.Scene();
+  const m=new THREE.ShaderMaterial({side:THREE.BackSide,vertexShader:'varying vec3 vP;void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+    fragmentShader:'varying vec3 vP;void main(){vec3 d=normalize(vP);float h=d.y;vec3 c=mix(vec3(.18,.16,.12),vec3(.75,.82,.95),smoothstep(-.25,.7,h));c+=vec3(1.,.88,.7)*pow(max(0.,dot(d,normalize(vec3(-.4,.8,.5)))),20.)*4.;gl_FragColor=vec4(c,1.);}'});
+  sc.add(new THREE.Mesh(new THREE.SphereGeometry(10,32,16),m));_env=pm.fromScene(sc,0).texture;pm.dispose();return _env}
+function pbrMat(SM){const m=new THREE.MeshStandardMaterial({map:SM.map,normalMap:null,roughnessMap:SM.roughnessMap||null,metalnessMap:SM.metalnessMap||null,roughness:SM.roughness!=null?SM.roughness:1,metalness:.45,
+    emissiveMap:SM.emissiveMap||null,emissive:SM.emissiveMap?new THREE.Color(0xffc070):new THREE.Color(0),emissiveIntensity:SM.emissiveMap?1.2:0,side:THREE.DoubleSide});return m}
+/* procedural layers on a real rig, for models that ship fewer clips than the game needs */
+const PROC={
+  walk:(root,ph)=>{const b=n=>root.getObjectByName(n);const s=Math.sin(ph*TAU),c=Math.cos(ph*TAU);const ul=b('UpLeg.L'),ur=b('UpLeg.R'),ll=b('Leg.L'),lr=b('Leg.R'),hp=b('Hips'),sp=b('Spine');
+    if(ul)ul.rotateX(s*.62);if(ur)ur.rotateX(-s*.62);if(ll)ll.rotateX(-Math.max(0,-s)*.9-.08);if(lr)lr.rotateX(-Math.max(0,s)*.9-.08);if(hp){hp.position.y+=Math.abs(c)*.035*(hp.position.y||1);hp.rotateY(s*.08)}if(sp)sp.rotateX(.12)},
+  fall:(root,t)=>{const b=n=>root.getObjectByName(n);const e=Math.min(1,t*1.25),k=e*e*(3-2*e);const hp=b('Hips'),sp=b('Spine');if(hp){hp.rotateX(-1.5*k);hp.position.y*=1-.62*k}if(sp)sp.rotateX(-.25*k)}};
+function fixWinding(geos){const g=geos[0];if(!g||!g.index)return;const I=g.index.array,P=g.attributes.position,N=g.attributes.normal;let pos=0,neg=0;const a=new THREE.Vector3(),b=new THREE.Vector3(),c=new THREE.Vector3(),n=new THREE.Vector3();
+  for(let t=0;t<I.length;t+=3*Math.max(1,Math.floor(I.length/3/400))){a.fromBufferAttribute(P,I[t]);b.fromBufferAttribute(P,I[t+1]).sub(a);c.fromBufferAttribute(P,I[t+2]).sub(a);b.cross(c);n.set(N.getX(I[t]),N.getY(I[t]),N.getZ(I[t]));if(b.dot(n)>=0)pos++;else neg++}
+  if(neg>pos*1.5){for(let t=0;t<I.length;t+=3){const x=I[t+1];I[t+1]=I[t+2];I[t+2]=x}g.index.needsUpdate=true}}
 function bake(sp){const src=GL[sp.file];const root=THREE.SkeletonUtils.clone(src.scene);
   root.traverse(o=>{if(o.isMesh&&sp.hide&&sp.hide.includes(o.name))o.visible=false});
   if(sp.w)for(const side in sp.w){const w0=WEAP.getObjectByName(sp.w[side]);const slot=root.getObjectByName('handslot.'+side);if(w0&&slot){const w=w0.clone(true);w.position.set(0,0,0);slot.add(w)}}
   root.updateMatrixWorld(true);
   const meshes=[];root.traverse(o=>{if(o.isMesh){let v=true,p=o;while(p){if(!p.visible)v=false;p=p.parent}if(v)meshes.push(o)}});
-  let total=0;let tex=null;
-  const parts=meshes.map(m=>{const g=m.geometry;const c=g.attributes.position.count;const pt={m,c,off:total,P:decodeAttr(g.attributes.position),N:decodeAttr(g.attributes.normal),UV:g.attributes.uv?decodeAttr(g.attributes.uv):new Float32Array(c*2),idx:g.index?g.index.array:null,col:(m.material&&m.material.color)?m.material.color:null};total+=c;
-    if(!tex&&m.material&&m.material.map)tex=m.material.map;
+  let total=0;let tex=null;let SM=null;
+  const parts=meshes.map(m=>{const g=m.geometry;const c=g.attributes.position.count;const pt={m,c,off:total,P:decodeAttr(g.attributes.position,true),N:decodeAttr(g.attributes.normal),UV:g.attributes.uv?decodeAttr(g.attributes.uv):new Float32Array(c*2),idx:g.index?g.index.array:null,col:(m.material&&m.material.color)?m.material.color:null};total+=c;
+    if(!tex&&m.material&&m.material.map){tex=m.material.map;SM=m.material}
     if(m.isSkinnedMesh){pt.SI=decodeAttr(g.attributes.skinIndex);pt.SW=decodeAttr(g.attributes.skinWeight);const e=m.bindMatrix.elements;const P=pt.P,N=pt.N;
       for(let v=0;v<c;v++){const x=P[v*3],y=P[v*3+1],z=P[v*3+2];P[v*3]=e[0]*x+e[4]*y+e[8]*z+e[12];P[v*3+1]=e[1]*x+e[5]*y+e[9]*z+e[13];P[v*3+2]=e[2]*x+e[6]*y+e[10]*z+e[14];
         const a=N[v*3],b=N[v*3+1],d=N[v*3+2];N[v*3]=e[0]*a+e[4]*b+e[8]*d;N[v*3+1]=e[1]*a+e[5]*b+e[9]*d;N[v*3+2]=e[2]*a+e[6]*b+e[10]*d}}
@@ -822,7 +837,7 @@ function bake(sp){const src=GL[sp.file];const root=THREE.SkeletonUtils.clone(src
   const FR={idle:8,move:12,atk:10,die:12};
   for(const key of['idle','move','atk','die']){const clip=THREE.AnimationClip.findByName(src.animations,sp.a[key]);const n=FR[key];anims[key]={start:geos.length,n,dur:clip?clip.duration:1};
     mixer.stopAllAction();if(clip){const ac=mixer.clipAction(clip);ac.reset();ac.setLoop(THREE.LoopRepeat);ac.play()}
-    for(let i=0;i<n;i++){const t=clip?((key==='idle'||key==='move')?clip.duration*i/n:clip.duration*.97*i/(n-1)):0;mixer.setTime(t);for(const [b,q] of POSE)b.quaternion.copy(q);root.updateMatrixWorld(true);
+    for(let i=0;i<n;i++){const t=clip?((key==='idle'||key==='move')?clip.duration*i/n:clip.duration*.97*i/(n-1)):0;mixer.setTime(t);for(const [b,q] of POSE)b.quaternion.copy(q);if(sp.proc&&sp.proc[key])sp.proc[key](root,(key==='idle'||key==='move')?i/n:i/(n-1));root.updateMatrixWorld(true);
       const pos=new Float32Array(total*3),nor=new Int8Array(total*3);
       for(const p of parts){const m=p.m,o=p.off*3,P=p.P,N=p.N;
         if(m.isSkinnedMesh){const bones=m.skeleton.bones,inv=m.skeleton.boneInverses;M1.multiplyMatrices(m.matrixWorld,m.bindMatrixInverse);const BM=new Float32Array(bones.length*16);
@@ -840,7 +855,7 @@ function bake(sp){const src=GL[sp.file];const root=THREE.SkeletonUtils.clone(src
       const g=new THREE.BufferGeometry();g.setIndex(idxA);g.setAttribute('position',new THREE.BufferAttribute(pos,3));g.setAttribute('normal',new THREE.BufferAttribute(nor,3,true));g.setAttribute('uv',uvA);if(colA)g.setAttribute('color',colA);
       g.boundingSphere=new THREE.Sphere(new THREE.Vector3(0,.7,0),1.6);geos.push(g)}}
   mixer.stopAllAction();
-  const mat=tex?new THREE.MeshLambertMaterial({map:tex}):new THREE.MeshLambertMaterial({vertexColors:true});if(sp.rotY)rotGeos(geos,sp.rotY);return{geos,anims,mat,meshes:[],cap:180,ref:sp.ref||4,baseMap:tex}}
+  const mat=tex?(sp.pbr&&SM&&SM.isMeshStandardMaterial?pbrMat(SM):new THREE.MeshLambertMaterial({map:tex})):new THREE.MeshLambertMaterial({vertexColors:true});fixWinding(geos);if(sp.rotY)rotGeos(geos,sp.rotY);return{geos,anims,mat,meshes:[],cap:180,ref:sp.ref||4,baseMap:tex}}
 const _col=new THREE.Color();
 function frameOf(u,B){const A=B.anims;let a,ph;
   if(!u.alive){a=A.die;ph=Math.min(.999,(u.dieT||0)/Math.min(1.1,a.dur))}
@@ -1069,7 +1084,7 @@ function renderShop(){const box=$('shopBox');let h='';
   for(const hh of HEROES){const lv=save.ab[hh.id]||0;const c=AB_COST[lv];h+=`<div class="abrow"><span class="e">${hh.ab.e}</span><div class="ai"><b>${hh.ab.name} · ${hh.name}</b><small>עוצמה +${lv*25}% · טעינה מהירה ב־${lv*10}%</small><div class="pips">${[0,1,2,3,4].map(i=>'<i class="'+(i<lv?'on':'')+'"></i>').join('')}</div></div>${lv>=5?'<button class="buy" disabled>מקסימום</button>':`<button class="buy gem" data-ab="${hh.id}" ${save.gems<c?'disabled':''}>💎 ${c}</button>`}</div>`}
   h+='</div><h4 class="sec2">⚡ בוסטרים לקרב הבא</h4><div class="road">';
   for(const b of BOOSTS)h+=`<div class="abrow"><span class="e">${b.e}</span><div class="ai"><b>${b.n}${save.boost[b.k]?' · יש לך '+save.boost[b.k]:''}</b><small>${b.d}</small></div><button class="buy gem" data-boost="${b.k}" ${save.gems<b.p?'disabled':''}>💎 ${b.p}</button></div>`;
-  h+='</div><p class="how" style="margin-top:12px">רכישות בכסף אמיתי יופעלו בגרסת Google Play ו־App Store. דמויות ומבנים: KayKit מאת Kay Lousberg (CC0). מוזיקה: Tanner Helland (CC BY 4.0). אפקטים: Kenney ואחרים (CC0).</p>';
+  h+='</div><p class="how" style="margin-top:12px">רכישות בכסף אמיתי יופעלו בגרסת Google Play ו־App Store. דמויות ומבנים: KayKit מאת Kay Lousberg (CC0). לוחם הגמדים: „Dwarf Warrior” מאת Northcliffe (CC BY 4.0, עובד למשחק). מוזיקה: Tanner Helland (CC BY 4.0). אפקטים: Kenney ואחרים (CC0).</p>';
   box.innerHTML=h;
   box.querySelectorAll('[data-iap]').forEach(b=>b.onclick=async()=>{ac();const id=b.dataset.iap;const item=IAP.find(p=>p.id===id)||OFFERS[id];if(await Billing.buy(item))grant(item)});
   box.querySelectorAll('[data-skin]').forEach(b=>b.onclick=()=>{const key=b.dataset.skin;const [hid,sid]=key.split('_');const sk=skinDef(hid,sid);if(save.gems<sk.p)return;ac();save.gems-=sk.p;save.skins.own.push(key);save.skins.eq[hid]=sid;persist();sfx.fanfare();toast('🎭 '+sk.n+' שלך!');afterSkin(hid)});

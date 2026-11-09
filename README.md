@@ -12,3 +12,5 @@
 אפקטים קוליים: Kenney, NazdyNate ואחרים (CC0) — https://github.com/lavenderdotpet/CC0-Public-Domain-Sounds
 
 - Horse and nature props: [Quaternius](https://quaternius.com) — CC0 (Ultimate Animated Animal Pack, Ultimate Nature Pack)
+
+- Dwarf Warrior (knight unit): "Dwarf Warrior" by [Northcliffe](https://sketchfab.com/Samson.Northcliffe.Rydenko), [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/), glTF conversion by J-Ponzo (github.com/J-Ponzo/gltf-dwarf-warrior); modified: mesh simplified, textures resized, procedural walk/fall added.

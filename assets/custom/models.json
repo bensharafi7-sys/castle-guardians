@@ -1,0 +1,13 @@
+{
+  "_credits": "Dwarf Warrior by Northcliffe (https://sketchfab.com/Samson.Northcliffe.Rydenko), CC BY 4.0, via github.com/J-Ponzo/gltf-dwarf-warrior; simplified, textures resized, procedural walk/fall added.",
+  "units": {
+    "knight": {
+      "file": "dwarf_warrior",
+      "height": 1.5,
+      "rotateY": 0,
+      "pbr": true,
+      "moveRef": 3,
+      "anims": { "idle": "Idle", "move": "@walk:Idle", "atk": "Attack", "die": "@fall:Idle" }
+    }
+  }
+}
