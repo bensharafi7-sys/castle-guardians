@@ -1,0 +1,11 @@
+{
+  "_note": "Demo of the drop-in pipeline using a CC0 Quaternius knight (not the final art). Open the game with ?demo=models",
+  "units": {
+    "knight": {
+      "file": "q_KnightCharacter",
+      "height": 1.45,
+      "rotateY": 0,
+      "anims": { "idle": "Idle_swordRight", "move": "Run", "atk": "Run_swordAttack", "die": "Death" }
+    }
+  }
+}

@@ -81,6 +81,8 @@ button:focus-visible{outline:3px solid #fff;outline-offset:2px}
 .ft.gold{color:var(--gold)}
 .ft.heal{color:#8ff07a}
 .ft.blk{color:#c9d3dd;font-size:15px}
+#modelRep{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:60;background:rgba(14,10,24,.95);color:#fff;border:2px solid #7cc4ff;border-radius:14px;padding:14px 16px;max-width:94vw;max-height:86vh;overflow:auto;font:13px/1.45 system-ui;direction:rtl}
+#modelRep table{border-collapse:collapse;margin-top:8px}#modelRep td,#modelRep th{border-bottom:1px solid rgba(255,255,255,.15);padding:4px 8px;text-align:right;vertical-align:top}#modelRep .ok{color:#7dff9a}#modelRep .bad{color:#ff9a8a}#modelRep .cl{direction:ltr;text-align:left;opacity:.75;font-size:11px}#modelRep small{display:block;margin-top:8px;opacity:.6}
 #splash{position:fixed;inset:0;z-index:40;display:grid;place-items:center;background:radial-gradient(ellipse at center,#1d2233 0%,#07080d 75%);animation:splOut .6s ease 2.5s forwards;cursor:pointer}
 #splash.skip{animation:splOut .3s ease forwards}
 .spl-in{text-align:center;direction:ltr;animation:splIn 1.1s cubic-bezier(.2,.8,.2,1) both}
@@ -771,8 +773,35 @@ async function loadAssets(onP,onT){const L=new THREE.GLTFLoader();const files=['
   let done=0;const tot=files.length+Object.keys(BSPEC).length;onT('טוען דמויות ומבנים...');
   await Promise.all(files.map(f=>new Promise((res,rej)=>L.load('assets/'+f+(window.__PWA?'.glb':'.json'),g=>{GL[f]=g;done++;onP(done/tot);res()},undefined,rej))));
   KITROOT=GL.kit.scene;toLambert(KITROOT);KITROOT.updateMatrixWorld(true);WEAP=GL.weapons.scene;
+  try{onT('בודק מודלים מקצועיים...');await loadCustomModels(L)}catch(e){console.warn('custom models',e)}
   onT('מכין אנימציות...');for(const k in BSPEC){if(!BSPEC[k]._s){BSPEC[k]._s=1;BSPEC[k].h*=1.12}BK[k]=bake(BSPEC[k]);addRim(BK[k].mat,ENEMY_BK.has(k)?0xff5a3c:0x7cc4ff,ENEMY_BK.has(k)?.55:.5);done++;onP(done/tot);await new Promise(r=>setTimeout(r,0))}
   ASSETS_READY=true}
+/* ===== v10c: drop-in professional character models (GLB with rig + animations) =====
+   assets/custom/models.json → {"units":{"knight":{"file":"my_knight","height":1.4,"rotateY":0,"anims":{"idle":"Idle","move":"Run","atk":"Attack","die":"Death"},"hide":[]}},
+                                "heroes":{"hero":{"file":"my_hero","anims":{"idle":"Idle","move":"Run","atk":"Shoot","die":"Death","cast":"Cast"}}}}            */
+const CUSTOM={entries:[],src:null};
+async function loadCustomModels(L){const q=location.search;const demo=/[?&]demo=models/.test(q);let man=null;const name=demo?'demo':'models';
+  try{const r=await fetch('assets/custom/'+name+'.json',{cache:'no-store'});if(r.ok)man=await r.json()}catch(e){}
+  if(!man){if(/[?&]models/.test(q))showModelReport();return}CUSTOM.src=name;
+  for(const group of['units','heroes']){const list=man[group]||{};for(const key in list){const d=list[key]||{};const ent={group,key,file:d.file||'',status:'',missing:[],clips:[]};CUSTOM.entries.push(ent);
+      const tgt=group==='units'?BSPEC[key]:HSPEC[key];if(!tgt){ent.status='שם לא מוכר';continue}if(!d.file){ent.status='חסר שם קובץ';continue}
+      const url='assets/custom/'+(/\.(glb|gltf|json)$/i.test(d.file)?d.file:d.file+(window.__PWA?'.glb':'.json'));
+      let g;try{g=await new Promise((res,rej)=>L.load(url,res,undefined,rej))}catch(e){ent.status='הקובץ לא נמצא';continue}
+      g.animations.forEach(c=>{c.name=c.name.split('|').pop()});ent.clips=g.animations.map(c=>c.name);
+      const A=Object.assign({},d.anims||{});const need=['idle','move','atk','die'];for(const k of need)if(!A[k]||!ent.clips.includes(A[k]))ent.missing.push(k);
+      if(group==='heroes'&&(!A.cast||!ent.clips.includes(A.cast)))A.cast=A.atk;
+      let skinned=false;g.scene.traverse(o=>{if(o.isSkinnedMesh)skinned=true});if(!skinned){ent.status='אין שלד (Rig)';continue}
+      if(ent.missing.length){ent.status='חסרות אנימציות';continue}
+      GL['custom:'+key]=g;const rot=(d.rotateY||0)*Math.PI/180;
+      if(group==='units')BSPEC[key]=Object.assign({},tgt,{file:'custom:'+key,a:A,h:d.height||tgt.h,hide:d.hide||[],w:null,pose:d.pose||null,ref:d.moveRef||tgt.ref,rotY:rot,_s:0});
+      else HSPEC[key]=Object.assign({},tgt,{file:'custom:'+key,anims:A,h:d.height||tgt.h,hide:d.hide||[],rotY:rot});
+      ent.status='פעיל'}}
+  if(/[?&]models/.test(q)||demo)showModelReport()}
+function rotGeos(geos,a){const c=Math.cos(a),s=Math.sin(a);const done=new Set();for(const g of geos){const P=g.attributes.position,N=g.attributes.normal;if(!done.has(P)){done.add(P);for(let i=0;i<P.count;i++){const x=P.getX(i),z=P.getZ(i);P.setX(i,c*x+s*z);P.setZ(i,-s*x+c*z)}P.needsUpdate=true}
+    if(N&&!done.has(N)){done.add(N);for(let i=0;i<N.count;i++){const x=N.getX(i),z=N.getZ(i);N.setX(i,Math.round(c*x+s*z));N.setZ(i,Math.round(-s*x+c*z))}N.needsUpdate=true}}}
+function showModelReport(){let el=document.getElementById('modelRep');if(!el){el=document.createElement('div');el.id='modelRep';document.body.appendChild(el);el.onclick=()=>el.remove()}
+  const rows=CUSTOM.entries.map(e=>'<tr><td>'+e.key+'</td><td>'+e.file+'</td><td class="'+(e.status==='פעיל'?'ok':'bad')+'">'+(e.status==='פעיל'?'✓ ':'✗ ')+e.status+(e.missing.length?' ('+e.missing.join(', ')+')':'')+'</td><td class="cl">'+e.clips.join(' · ')+'</td></tr>').join('');
+  el.innerHTML='<b>מודלים מקצועיים'+(CUSTOM.src?' · '+CUSTOM.src+'.json':'')+'</b>'+(rows?'<table><tr><th>יחידה</th><th>קובץ</th><th>מצב</th><th>אנימציות בקובץ</th></tr>'+rows+'</table>':'<p>לא נמצא assets/custom/models.json — המשחק משתמש במודלים המובנים.</p>')+'<small>נגיעה לסגירה</small>'}
 function bake(sp){const src=GL[sp.file];const root=THREE.SkeletonUtils.clone(src.scene);
   root.traverse(o=>{if(o.isMesh&&sp.hide&&sp.hide.includes(o.name))o.visible=false});
   if(sp.w)for(const side in sp.w){const w0=WEAP.getObjectByName(sp.w[side]);const slot=root.getObjectByName('handslot.'+side);if(w0&&slot){const w=w0.clone(true);w.position.set(0,0,0);slot.add(w)}}
@@ -811,7 +840,7 @@ function bake(sp){const src=GL[sp.file];const root=THREE.SkeletonUtils.clone(src
       const g=new THREE.BufferGeometry();g.setIndex(idxA);g.setAttribute('position',new THREE.BufferAttribute(pos,3));g.setAttribute('normal',new THREE.BufferAttribute(nor,3,true));g.setAttribute('uv',uvA);if(colA)g.setAttribute('color',colA);
       g.boundingSphere=new THREE.Sphere(new THREE.Vector3(0,.7,0),1.6);geos.push(g)}}
   mixer.stopAllAction();
-  const mat=tex?new THREE.MeshLambertMaterial({map:tex}):new THREE.MeshLambertMaterial({vertexColors:true});return{geos,anims,mat,meshes:[],cap:180,ref:sp.ref||4,baseMap:tex}}
+  const mat=tex?new THREE.MeshLambertMaterial({map:tex}):new THREE.MeshLambertMaterial({vertexColors:true});if(sp.rotY)rotGeos(geos,sp.rotY);return{geos,anims,mat,meshes:[],cap:180,ref:sp.ref||4,baseMap:tex}}
 const _col=new THREE.Color();
 function frameOf(u,B){const A=B.anims;let a,ph;
   if(!u.alive){a=A.die;ph=Math.min(.999,(u.dieT||0)/Math.min(1.1,a.dur))}
@@ -843,7 +872,7 @@ function skinTex(base,f,key){if(!f||!base||!base.image)return base;if(TEXC.has(k
     const [r,g,b]=hsl2rgb(hh,ss,ll);a[i]=r*255;a[i+1]=g*255;a[i+2]=b*255}
   x.putImageData(d,0,0);const t=new THREE.CanvasTexture(cv);t.flipY=base.flipY;t.encoding=base.encoding;t.wrapS=base.wrapS;t.wrapT=base.wrapT;t.magFilter=base.magFilter;t.minFilter=base.minFilter;TEXC.set(key,t);return t}
 function skinDef(hid,sid){return (SKINS[hid]||[]).find(k=>k.id===sid)}
-function heroModel(kind,skinId){const sp=HSPEC[kind];const src=GL[sp.file];const root=THREE.SkeletonUtils.clone(src.scene);const hid=(HEROES.find(h=>h.model===kind)||{}).id;const sd=skinDef(hid,skinId);
+function heroModel(kind,skinId){const sp=HSPEC[kind];const src=GL[sp.file];const root=THREE.SkeletonUtils.clone(src.scene);if(sp.rotY)root.rotation.y=sp.rotY;const hid=(HEROES.find(h=>h.model===kind)||{}).id;const sd=skinDef(hid,skinId);
   root.traverse(o=>{if(o.isMesh){if(sp.hide.includes(o.name))o.visible=false;const base=o.material.map;const t=sd&&sd.f?skinTex(base,sd.f,sp.file+':'+skinId):base;
     o.material=new THREE.MeshLambertMaterial({map:t,skinning:!!o.isSkinnedMesh});addRim(o.material,0xffe3a0,.55);o.castShadow=true;o.frustumCulled=false}});
   const holder=new THREE.Group();holder.add(root);root.updateMatrixWorld(true);const bb=new THREE.Box3().setFromObject(root);const k=sp.h/Math.max(.01,bb.max.y-bb.min.y);root.scale.setScalar(k);root.position.y=-bb.min.y*k;
@@ -2112,7 +2141,7 @@ requestAnimationFrame(frame);
   try{if(!(THREE.GLTFLoader&&THREE.SkeletonUtils))throw new Error('no loader');await loadAssets(p=>{bar.style.width=Math.round(p*100)+'%'},t=>{txt.textContent=t});
     decorateWorld();preview();}catch(e){console.warn('assets fallback',e)}
   try{makePortraits()}catch(e){}renderMenu();$('loadO').hidden=true})();
-window.__AUD=AUD;window.__game={OCC,openPerksT:()=>{S.pendingPerks=(S.pendingPerks||0)+1;openPerks()},renderer,camera,killKeep:()=>hurtKeep(1e7),setCam:(y,z)=>{camDist={y,z}},applyTheme,useAbility,heroDef,openChest,spawnChest:(t)=>spawnChest(H.g.position.x+2,H.g.position.z,t),spawnGoblin:()=>spawnGoblin(),spawnDrop:()=>spawnDrop(),startFury:()=>startFury(),IP,iconShot:(k,w,h)=>{const r=new THREE.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});r.outputEncoding=THREE.sRGBEncoding;r.toneMapping=THREE.ACESFilmicToneMapping;r.toneMappingExposure=1.05;r.setPixelRatio(1);r.setSize(w,h);const sc=new THREE.Scene();sc.add(new THREE.HemisphereLight(0xfff3dc,0x6b5a3a,.95));const dl=new THREE.DirectionalLight(0xffffff,.7);dl.position.set(2,4,5);sc.add(dl);const cam=new THREE.PerspectiveCamera(26,w/h,.1,50);const g=modelGroup(k);g.rotation.y=-.35;sc.add(g);const bb=new THREE.Box3().setFromObject(g);const hh=bb.max.y-bb.min.y;cam.position.set(0,bb.min.y+hh*.55,hh*2.55);cam.lookAt(0,bb.min.y+hh*.5,0);r.render(sc,cam);return r.domElement.toDataURL('image/png')},get S(){return S},get enemies(){return enemies},get pads(){return pads},get H(){return H},get soldiers(){return soldiers},input,forceWave:()=>{if(S)S.breakT=0},addSoldier:(t)=>addSoldier(t,H.g.position.x+rand(-2,2),H.g.position.z+rand(-1,1)),spawn:(k)=>spawnEnemy(k,0,0,0,[H.g.position.x+3,H.g.position.z-3])};
+window.__AUD=AUD;window.__game={CUSTOM,BSPEC,openPerksT:()=>{S.pendingPerks=(S.pendingPerks||0)+1;openPerks()},renderer,camera,killKeep:()=>hurtKeep(1e7),setCam:(y,z)=>{camDist={y,z}},applyTheme,useAbility,heroDef,openChest,spawnChest:(t)=>spawnChest(H.g.position.x+2,H.g.position.z,t),spawnGoblin:()=>spawnGoblin(),spawnDrop:()=>spawnDrop(),startFury:()=>startFury(),IP,iconShot:(k,w,h)=>{const r=new THREE.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});r.outputEncoding=THREE.sRGBEncoding;r.toneMapping=THREE.ACESFilmicToneMapping;r.toneMappingExposure=1.05;r.setPixelRatio(1);r.setSize(w,h);const sc=new THREE.Scene();sc.add(new THREE.HemisphereLight(0xfff3dc,0x6b5a3a,.95));const dl=new THREE.DirectionalLight(0xffffff,.7);dl.position.set(2,4,5);sc.add(dl);const cam=new THREE.PerspectiveCamera(26,w/h,.1,50);const g=modelGroup(k);g.rotation.y=-.35;sc.add(g);const bb=new THREE.Box3().setFromObject(g);const hh=bb.max.y-bb.min.y;cam.position.set(0,bb.min.y+hh*.55,hh*2.55);cam.lookAt(0,bb.min.y+hh*.5,0);r.render(sc,cam);return r.domElement.toDataURL('image/png')},get S(){return S},get enemies(){return enemies},get pads(){return pads},get H(){return H},get soldiers(){return soldiers},input,forceWave:()=>{if(S)S.breakT=0},addSoldier:(t)=>addSoldier(t,H.g.position.x+rand(-2,2),H.g.position.z+rand(-1,1)),spawn:(k)=>spawnEnemy(k,0,0,0,[H.g.position.x+3,H.g.position.z-3])};
 })();
 </script>
 
