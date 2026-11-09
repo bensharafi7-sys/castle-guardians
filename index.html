@@ -591,7 +591,7 @@ function lambertOf(m,skinning){const key=m.uuid+(skinning?'s':'');if(LMAT.has(ke
 function toLambert(root){root.traverse(o=>{if(o.isMesh){o.material=lambertOf(o.material,o.isSkinnedMesh);o.castShadow=true;o.receiveShadow=true}})}
 async function loadAssets(onP,onT){const L=new THREE.GLTFLoader();const files=['c_Rogue','c_Rogue_Hooded','c_Knight','c_Mage','c_Barbarian','c_Skeleton_Minion','c_Skeleton_Rogue','c_Skeleton_Warrior','c_Skeleton_Mage','weapons','kit'];
   let done=0;const tot=files.length+Object.keys(BSPEC).length;onT('טוען דמויות ומבנים...');
-  await Promise.all(files.map(f=>new Promise((res,rej)=>L.load('assets/'+f+'.glb',g=>{GL[f]=g;done++;onP(done/tot);res()},undefined,rej))));
+  await Promise.all(files.map(f=>new Promise((res,rej)=>L.load('assets/'+f+(window.__PWA?'.glb':'.json'),g=>{GL[f]=g;done++;onP(done/tot);res()},undefined,rej))));
   KITROOT=GL.kit.scene;toLambert(KITROOT);KITROOT.updateMatrixWorld(true);WEAP=GL.weapons.scene;
   onT('מכין אנימציות...');for(const k in BSPEC){BK[k]=bake(BSPEC[k]);done++;onP(done/tot);await new Promise(r=>setTimeout(r,0))}
   ASSETS_READY=true}
