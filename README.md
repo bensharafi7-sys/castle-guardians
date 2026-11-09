@@ -8,3 +8,5 @@
 
 ## קרדיטים
 דמויות, מבנים ונוף: KayKit מאת Kay Lousberg (www.kaylousberg.com), ברישיון CC0.
+מוזיקה: Tanner Helland (CC BY 4.0) — https://github.com/tannerhelland/free-music
+אפקטים קוליים: Kenney, NazdyNate ואחרים (CC0) — https://github.com/lavenderdotpet/CC0-Public-Domain-Sounds

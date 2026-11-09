@@ -217,6 +217,8 @@ button:focus-visible{outline:3px solid #fff;outline-offset:2px}
 .abrow .e{font-size:30px}.abrow .ai{flex:1;min-width:150px}.abrow b{font-family:var(--display);font-weight:400;font-size:17px;display:block}.abrow small{font-size:12.5px;color:#6b4a2b;font-weight:700}
 .pips{display:flex;gap:3px;margin-top:3px}.pips i{width:16px;height:6px;border-radius:3px;background:#e3cfa3}.pips i.on{background:#8a4ae0}
 .vipTag{background:linear-gradient(#ffe066,#e8a00b);color:var(--ink)}
+.volRow{display:flex;align-items:center;gap:12px;background:#f3e3c3;border:2px solid #d8bf91;border-radius:12px;padding:8px 14px;font-weight:700;font-size:16px}
+.volRow span{min-width:92px}.volRow input{flex:1;accent-color:var(--red);height:28px}
 @media (prefers-reduced-motion:reduce){#banner.on h2{animation:none}#gold.bump{animation:none}}
 </style>
 
@@ -232,6 +234,7 @@ button:focus-visible{outline:3px solid #fff;outline-offset:2px}
   <div class="btns">
     <button class="icoBtn" id="pauseBtn" aria-label="השהה">❚❚</button>
     <button class="icoBtn" id="setBtn" aria-label="הגדרות">⚙️</button>
+    <button class="icoBtn" id="muteBtn2" aria-label="השתקה">🔊</button>
   </div>
   <div id="quests"><button id="qHead"><span>📜 משימות</span><span id="qCount"></span></button><div id="qList"></div></div>
 </div>
@@ -291,7 +294,8 @@ button:focus-visible{outline:3px solid #fff;outline-offset:2px}
 <div class="overlay" id="setO" hidden>
   <div class="card" style="max-width:420px">
     <h2 class="title" style="font-size:40px">הגדרות</h2>
-    <div class="setList"><button class="setRow" id="s-music"></button><button class="setRow" id="s-sfx"></button><button class="setRow" id="s-vib"></button><button class="setRow" id="s-gfx"></button><button class="setRow" id="s-full"><span>⛶ מסך מלא</span><span></span></button></div>
+    <div class="setList"><div class="volRow"><span>🎵 מוזיקה</span><input type="range" id="vol-music" min="0" max="100"></div><div class="volRow"><span>💥 אפקטים</span><input type="range" id="vol-sfx" min="0" max="100"></div>
+      <div class="volRow"><span>🎙️ קריינות</span><input type="range" id="vol-voice" min="0" max="100"></div><div class="volRow"><span>🌿 אווירה</span><input type="range" id="vol-amb" min="0" max="100"></div><button class="setRow" id="s-mute"></button><button class="setRow" id="s-vib"></button><button class="setRow" id="s-gfx"></button><button class="setRow" id="s-full"><span>⛶ מסך מלא</span><span></span></button></div>
     <div class="row" style="justify-content:center;margin-top:14px"><button class="big" id="setClose">חזרה</button><button class="big ghost" id="setQuit">לתפריט</button></div>
   </div>
 </div>
@@ -346,26 +350,33 @@ const pick=a=>a[Math.floor(Math.random()*a.length)];
 const TAU=Math.PI*2;
 
 /* ================= save ================= */
-let save={crowns:0,best:0,chapter:0,meta:{dmg:0,gold:0,squad:0,keep:0,hero:0,mine:0},hero:'arthur',owned:['arthur'],set:{music:1,sfx:1,vib:1,gfx:1},tut:0,daily:{last:'',streak:0},gems:0,hl:{},st:{kills:0,bosses:0,builds:0,chests:0,maxLvl:0},road:[],spin:'',idle:Date.now(),skins:{own:[],eq:{}},ab:{},boost:{gold2:0,perks3:0,keep50:0},vip:0,vipDay:'',starter:0};
+let save={crowns:0,best:0,chapter:0,meta:{dmg:0,gold:0,squad:0,keep:0,hero:0,mine:0},hero:'arthur',owned:['arthur'],set:{music:1,sfx:1,vib:1,gfx:1},tut:0,daily:{last:'',streak:0},gems:0,hl:{},st:{kills:0,bosses:0,builds:0,chests:0,maxLvl:0},road:[],spin:'',idle:Date.now(),skins:{own:[],eq:{}},ab:{},boost:{gold2:0,perks3:0,keep50:0},vip:0,vipDay:'',starter:0,vol:{music:.7,sfx:.9,voice:1,amb:.6,mute:0}};
 try{const s=JSON.parse(localStorage.getItem('kgSave')||'null');if(s){save.crowns=s.crowns|0;save.best=s.best|0;save.chapter=s.chapter|0;Object.assign(save.meta,s.meta||{});
   if(s.hero)save.hero=s.hero;if(Array.isArray(s.owned))save.owned=s.owned;Object.assign(save.set,s.set||{});save.tut=s.tut|0;if(s.daily)save.daily=s.daily;
   save.gems=s.gems|0;if(s.hl)save.hl=s.hl;Object.assign(save.st,s.st||{});if(Array.isArray(s.road))save.road=s.road;save.spin=s.spin||'';if(s.idle)save.idle=s.idle;
-  if(s.skins)save.skins=s.skins;if(s.ab)save.ab=s.ab;if(s.boost)Object.assign(save.boost,s.boost);save.vip=s.vip||0;save.vipDay=s.vipDay||'';save.starter=s.starter|0}}catch(e){}
+  if(s.skins)save.skins=s.skins;if(s.ab)save.ab=s.ab;if(s.boost)Object.assign(save.boost,s.boost);save.vip=s.vip||0;save.vipDay=s.vipDay||'';save.starter=s.starter|0;if(s.vol)Object.assign(save.vol,s.vol)}}catch(e){}
 let pT=null;function persistSoon(){if(pT)return;pT=setTimeout(()=>{pT=null;persist()},1500)}
 function persist(){try{localStorage.setItem('kgSave',JSON.stringify(save))}catch(e){}}
 
 /* ================= audio ================= */
 let AC=null,muted=false,sfxBus=null,musBus=null;const thr={};
-function ac(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)();const comp=AC.createDynamicsCompressor();comp.connect(AC.destination);
-  sfxBus=AC.createGain();sfxBus.gain.value=save.set.sfx?.9:0;sfxBus.connect(comp);musBus=AC.createGain();musBus.gain.value=save.set.music?.5:0;musBus.connect(comp);startMusic()}catch(e){AC=null}}
+let master=null,musFilt=null,voiceBus=null,ambBus=null,musDuck=null,ambDuck=null;
+function ac(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)();const comp=AC.createDynamicsCompressor();comp.threshold.value=-14;comp.ratio.value=3;comp.connect(AC.destination);
+  master=AC.createGain();master.connect(comp);
+  sfxBus=AC.createGain();sfxBus.connect(master);
+  musDuck=AC.createGain();musFilt=AC.createBiquadFilter();musFilt.type='lowpass';musFilt.frequency.value=20000;musBus=AC.createGain();musBus.connect(musFilt);musFilt.connect(musDuck);musDuck.connect(master);
+  ambDuck=AC.createGain();ambBus=AC.createGain();ambBus.connect(ambDuck);ambDuck.connect(master);
+  voiceBus=AC.createGain();voiceBus.connect(master);
+  applyVol();loadSfx();loadVoices();setMusic(AUD.want||'menu',true)}catch(e){AC=null}}
   if(AC&&AC.state==='suspended')AC.resume();return AC}
+function applyVol(){if(!AC)return;const v=save.vol;master.gain.value=v.mute?0:1;sfxBus.gain.value=v.sfx;musBus.gain.value=v.music*.75;voiceBus.gain.value=v.voice*1.15;ambBus.gain.value=v.amb*.8}
 function buzz(p){if(save.set.vib&&navigator.vibrate){try{navigator.vibrate(p)}catch(e){}}}
 function tone(f,d,type,v,f2,delay){const a=AC;if(!a||muted)return;const t=a.currentTime+(delay||0);const o=a.createOscillator(),g=a.createGain();o.type=type||'sine';o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+d);g.gain.setValueAtTime(v||.08,t);g.gain.exponentialRampToValueAtTime(.0008,t+d);o.connect(g);g.connect(sfxBus);o.start(t);o.stop(t+d+.03)}
 let noiseBuf=null;
 function getNoise(a){if(!noiseBuf){noiseBuf=a.createBuffer(1,a.sampleRate*.5,a.sampleRate);const c=noiseBuf.getChannelData(0);for(let i=0;i<c.length;i++)c[i]=Math.random()*2-1}return noiseBuf}
 function noise(d,v,freq){const a=AC;if(!a||muted)return;getNoise(a);const s=a.createBufferSource();s.buffer=noiseBuf;const f=a.createBiquadFilter();f.type='lowpass';f.frequency.value=freq||900;const g=a.createGain();const t=a.currentTime;g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.001,t+d);s.connect(f);f.connect(g);g.connect(sfxBus);s.start(t);s.stop(t+d)}
 function once(k,ms,fn){const n=performance.now();if(thr[k]&&n-thr[k]<ms)return;thr[k]=n;fn()}
-const sfx={
+const synth={
   shoot:()=>once('s',70,()=>tone(rand(700,900),.07,'triangle',.022,380)),
   coin:()=>once('c',55,()=>tone(rand(1300,1600),.09,'sine',.04,2300)),
   pay:()=>once('p',60,()=>tone(rand(1000,1200),.05,'square',.02,1500)),
@@ -397,7 +408,79 @@ const MEL=[[[0,69,2],[2,72,2],[4,76,3],[7,74,1],[8,72,2],[10,71,2],[12,72,4]],[[
   [[0,67,2],[2,72,2],[4,76,3],[7,79,1],[8,76,2],[10,74,2],[12,72,4]],[[0,71,2],[2,74,2],[4,79,3],[7,77,1],[8,74,2],[10,71,2],[12,74,4]]];
 const MELB=[MEL[0],[[0,69,1],[1,69,1],[2,72,2],[4,76,2],[6,77,2],[8,76,2],[10,72,2],[12,69,4]],MEL[1],[[0,68,2],[2,71,2],[4,76,3],[7,74,1],[8,71,2],[10,68,2],[12,64,4]]];
 const BPM={menu:86,calm:96,battle:122,boss:136};
-function setMusic(m){mus.mode=m}
+/* ================= v6 audio engine: recorded music, SFX, voice, ambience ================= */
+const AUD={buf:{},vbuf:{},cnt:{},lastT:{},active:0,mus:{},amb:{},want:null,cur:null,ambWant:{},voiceT:0,vlast:{},battleAlt:0};
+const LIM={shoot:{max:3,gap:.06,vol:1},arrowhit:{max:3,gap:.07},punch:{max:3,gap:.08},bone:{max:2,gap:.12},edie:{max:2,gap:.15},egrunt:{max:2,gap:.4},sword:{max:3,gap:.08},slash:{max:3,gap:.08},
+  coin:{max:3,gap:.05,pv:.1},pay:{max:2,gap:.07},gem:{max:2,gap:.06},woodhit:{max:2,gap:.15},stonehit:{max:2,gap:.15},step:{max:1,gap:.2,pv:.12},cannon:{max:2,gap:.2},boom:{max:2,gap:.15},
+  spell:{max:2,gap:.1},click:{max:2,gap:.04,pv:.02},tick:{max:2,gap:.02,pv:.02},hurt:{max:1,gap:.25},roar:{max:1,gap:1},monster:{max:1,gap:.8},gong:{max:1,gap:1.2,pv:0},upgrade:{max:2,gap:.3,pv:.02}};
+async function loadSfx(){try{const man=await (await fetch('audio/sfx/manifest.json')).json();const jobs=[];
+  for(const k in man)for(let i=0;i<man[k];i++)jobs.push(fetch('audio/sfx/'+k+'_'+i+'.wav').then(r=>r.arrayBuffer()).then(b=>new Promise((res,rej)=>AC.decodeAudioData(b,res,rej))).then(d=>{(AUD.buf[k]=AUD.buf[k]||[]).push(d)}).catch(()=>{}));
+  await Promise.all(jobs)}catch(e){}}
+const VOICE={ready:'v_ready',prepare:'v_prepare',wave:'v_wave',attack:'v_attack',danger:'v_danger',tower:'v_tower',ability:'v_ability',victory:'v_victory',fall:'v_fall'};
+async function loadVoices(){for(const k in VOICE){fetch('audio/voice/'+VOICE[k]+'.mp3').then(r=>{if(!r.ok)throw 0;return r.arrayBuffer()}).then(b=>new Promise((res,rej)=>AC.decodeAudioData(b,res,rej))).then(d=>{AUD.vbuf[k]=d}).catch(()=>{})}}
+function play(n,o){o=o||{};const a=AC;if(!a||save.vol.mute)return false;const B=AUD.buf[n];if(!B||!B.length)return false;
+  const now=a.currentTime,lim=LIM[n]||{max:3,gap:.05};const c=(AUD.cnt[n]=(AUD.cnt[n]||[]).filter(t=>t>now));if(c.length>=lim.max||(AUD.lastT[n]&&now-AUD.lastT[n]<lim.gap))return true;
+  if(AUD.active>=26&&(o.pri||1)<2)return true;
+  let g=(o.vol||1)*(lim.vol||1),pan=0;if(o.x!=null){const dx=o.x-camLook.x,dz=o.z-camLook.z,d=Math.hypot(dx,dz);g*=Math.pow(Math.max(0,1-d/32),1.4);if(g<.025)return true;pan=Math.max(-1,Math.min(1,dx/15))}
+  const b=B[Math.floor(Math.random()*B.length)];const src=a.createBufferSource();src.buffer=b;const pv=lim.pv!=null?lim.pv:.07;src.playbackRate.value=(o.rate||1)*(1+(Math.random()*2-1)*pv);
+  const gn=a.createGain();gn.gain.value=g;src.connect(gn);let last=gn;if(pan&&a.createStereoPanner){const p=a.createStereoPanner();p.pan.value=pan*.75;gn.connect(p);last=p}last.connect(sfxBus);
+  src.start();c.push(now+b.duration/src.playbackRate.value);AUD.lastT[n]=now;AUD.active++;src.onended=()=>{AUD.active--};return true}
+function say(k,pri){const a=AC;if(!a||save.vol.mute)return;const b=AUD.vbuf[k];if(!b)return;const now=a.currentTime;const cd={wave:20,attack:35,tower:20,danger:30,ability:8}[k]||4;
+  if(AUD.vlast[k]&&now-AUD.vlast[k]<cd)return;if(now<AUD.voiceT&&!(pri>1))return;AUD.vlast[k]=now;
+  const src=a.createBufferSource();src.buffer=b;src.connect(voiceBus);src.start(now+.05);const end=now+.05+b.duration;AUD.voiceT=end;
+  for(const d of[musDuck,ambDuck]){d.gain.cancelScheduledValues(now);d.gain.setValueAtTime(d.gain.value,now);d.gain.linearRampToValueAtTime(d===musDuck?.3:.45,now+.15);d.gain.setValueAtTime(d===musDuck?.3:.45,end);d.gain.linearRampToValueAtTime(1,end+.6)}}
+function track(name,dir){if(AUD[dir][name])return AUD[dir][name];const el=new Audio();el.src='audio/'+(dir==='mus'?'music/':'amb/')+name+'.mp3';el.loop=true;el.preload='auto';
+  let g=null;try{const src=AC.createMediaElementSource(el);g=AC.createGain();g.gain.value=0;src.connect(g);g.connect(dir==='mus'?musBus:ambBus)}catch(e){}
+  el.addEventListener('error',()=>{AUD[dir][name].bad=true});return AUD[dir][name]={el,g,name,bad:false}}
+function fadeTo(t,v,dur){const now=AC.currentTime;t.g.gain.cancelScheduledValues(now);t.g.gain.setValueAtTime(t.g.gain.value,now);t.g.gain.linearRampToValueAtTime(v,now+dur)}
+const MSTATE={menu:'menu',calm:'peace',peace:'peace',tension:'tension',battle:'battle',boss:'boss'};
+function setMusic(m,force){let name=MSTATE[m]||m;if(name==='battle'&&S&&S.wave)name=(S.wave%2)?'battle':'battle2';AUD.want=m;if(!AC)return;
+  if(AUD.cur&&AUD.cur.name===name&&!force)return;const nt=track(name,'mus');if(nt.bad||!nt.g)return;const fade=name==='boss'||name.startsWith('battle')?1.2:2.4;
+  if(AUD.cur&&AUD.cur!==nt){const o=AUD.cur;fadeTo(o,0,fade);setTimeout(()=>{if(AUD.cur!==o)o.el.pause()},fade*1000+150)}
+  if(name.startsWith('battle')&&nt.el.currentTime>nt.el.duration-20)nt.el.currentTime=0;
+  try{const p=nt.el.play();if(p&&p.catch)p.catch(()=>{})}catch(e){}fadeTo(nt,1,fade);AUD.cur=nt;updAmb(m)}
+function stinger(name,vol){if(!AC)return;const el=new Audio('audio/music/'+name+'.mp3');try{const src=AC.createMediaElementSource(el);const g=AC.createGain();g.gain.value=vol||1;src.connect(g);g.connect(master);const p=el.play();if(p&&p.catch)p.catch(()=>{})}catch(e){}
+  const now=AC.currentTime;musDuck.gain.cancelScheduledValues(now);musDuck.gain.setValueAtTime(musDuck.gain.value,now);musDuck.gain.linearRampToValueAtTime(.12,now+.4);musDuck.gain.setValueAtTime(.12,now+7);musDuck.gain.linearRampToValueAtTime(1,now+9)}
+const AMBMIX={menu:{wind:.6,birds:.5},peace:{wind:.45,birds:.7,town:.5},tension:{wind:.5,march:.9},battle:{wind:.3,battle:.55},boss:{wind:.3,battle:.7,march:.4}};
+function updAmb(m){if(!AC)return;const mix=Object.assign({},AMBMIX[MSTATE[m]==='battle2'?'battle':(MSTATE[m]||m)]||{});if(forge&&S&&!S.over&&(m==='calm'||m==='peace'))mix.forge=.5;
+  for(const n of['wind','birds','town','forge','march','battle']){const v=mix[n]||0;let t=AUD.amb[n];if(!t&&v>0)t=track('amb_'+n,'amb'),AUD.amb[n]=t;if(!t||t.bad||!t.g)continue;
+    if(v>0){try{const p=t.el.play();if(p&&p.catch)p.catch(()=>{})}catch(e){}}fadeTo(t,v,2.5);if(!v)setTimeout(()=>{if(t.g.gain.value<.01)t.el.pause()},2700)}}
+function updAudioFrame(){if(!AC)return;const muff=!$('perkO').hidden||!$('chestO').hidden||!$('pauseO').hidden||!$('setO').hidden||!$('chapO').hidden;
+  const danger=S&&!S.over&&S.phase==='wave'&&keep&&keep.hp<keep.max*.3;const f=muff?750:danger?2600:20000;musFilt.frequency.setTargetAtTime(f,AC.currentTime,.25)}
+document.addEventListener('visibilitychange',()=>{if(!AC)return;if(document.hidden){AC.suspend();for(const d of['mus','amb'])for(const k in AUD[d])AUD[d][k].el.pause()}else{AC.resume();setMusic(AUD.want||'menu',true)}});
+document.addEventListener('pointerdown',e=>{if(e.target.closest&&e.target.closest('button'))sfx.click()},true);
+const sfx={
+  shoot:(x,z)=>play('shoot',{x,z,vol:.32})||synth.shoot(),
+  coin:()=>play('coin',{vol:.4})||synth.coin(),
+  pay:()=>play('pay',{vol:.35})||synth.pay(),
+  hit:(x,z)=>{const a=play('arrowhit',{x,z,vol:.45});if(Math.random()<.4)play('bone',{x,z,vol:.35});return a||synth.hit()},
+  clang:(x,z)=>play('metal',{x,z,vol:.45})||synth.clang(),
+  sword:(x,z)=>{play('slash',{x,z,vol:.4});return play('sword',{x,z,vol:.45})||synth.sword()},
+  die:(x,z,big)=>{play('bone',{x,z,vol:.6});return play(big?'monster':'edie',{x,z,vol:big?.8:.35})||synth.die()},
+  grunt:(x,z)=>play('egrunt',{x,z,vol:.4}),
+  build:()=>{const ok=play('build',{vol:.8,pri:2});setTimeout(()=>play('upgrade',{vol:.55,pri:2}),380);if(!ok)synth.build()},
+  boss:()=>{play('gong',{vol:.7,pri:3});return play('roar',{vol:.9,pri:3})||synth.boss()},
+  slam:(x,z)=>play('boom',{x,z,vol:1,pri:3})||synth.slam(),
+  boom:(x,z)=>play('cannon',{x,z,vol:.65})||synth.boom(),
+  zap:(x,z)=>play('spell',{x,z,vol:.5})||synth.zap(),
+  fire:(x,z)=>play('fire',{x,z,vol:.9,pri:3}),
+  lvl:()=>play('upgrade',{vol:.65,pri:3})||synth.lvl(),
+  wave:()=>play('gong',{vol:.75,pri:3})||synth.wave(),
+  win:()=>play('upgrade',{vol:.6,pri:2})||synth.win(),
+  quest:()=>play('confirm',{vol:.55,pri:2})||synth.quest(),
+  hurt:()=>play('hurt',{vol:.5,pri:2})||synth.hurt(),
+  wall:(x,z,stone)=>play(stone?'stonehit':'woodhit',{x,z,vol:.55})||synth.wall(),
+  wallbreak:(x,z)=>play('wallbreak',{x,z,vol:.9,pri:3}),
+  keep:()=>play('stonehit',{vol:.45}),
+  gem:()=>play('gem',{vol:.55})||synth.gem(),
+  flip:()=>play('thunk',{vol:.45})||synth.flip(),
+  tick:()=>play('tick',{vol:.45})||synth.tick(),
+  chest:()=>play('chest',{vol:.7,pri:3}),
+  fanfare:()=>{play('upgrade',{vol:.65,pri:3});return play('coin',{vol:.5})||synth.fanfare()},
+  step:()=>play('step',{vol:.16}),
+  whirl:(x,z)=>play('whirl',{x,z,vol:.55}),
+  click:()=>play('click',{vol:.45}),
+};
 function startMusic(){if(mus.timer||!AC)return;mus.next=AC.currentTime+.1;mus.timer=setInterval(schedule,25)}
 function schedule(){if(!AC||!mus.mode||!save.set.music||AC.state!=='running')return;const m=mus.mode,spb=60/BPM[m]/4;
   if(mus.next<AC.currentTime-.1)mus.next=AC.currentTime+.05;
@@ -753,12 +836,12 @@ function renderShop(){const box=$('shopBox');let h='';
   for(const hh of HEROES){const lv=save.ab[hh.id]||0;const c=AB_COST[lv];h+=`<div class="abrow"><span class="e">${hh.ab.e}</span><div class="ai"><b>${hh.ab.name} · ${hh.name}</b><small>עוצמה +${lv*25}% · טעינה מהירה ב־${lv*10}%</small><div class="pips">${[0,1,2,3,4].map(i=>'<i class="'+(i<lv?'on':'')+'"></i>').join('')}</div></div>${lv>=5?'<button class="buy" disabled>מקסימום</button>':`<button class="buy gem" data-ab="${hh.id}" ${save.gems<c?'disabled':''}>💎 ${c}</button>`}</div>`}
   h+='</div><h4 class="sec2">⚡ בוסטרים לקרב הבא</h4><div class="road">';
   for(const b of BOOSTS)h+=`<div class="abrow"><span class="e">${b.e}</span><div class="ai"><b>${b.n}${save.boost[b.k]?' · יש לך '+save.boost[b.k]:''}</b><small>${b.d}</small></div><button class="buy gem" data-boost="${b.k}" ${save.gems<b.p?'disabled':''}>💎 ${b.p}</button></div>`;
-  h+='</div><p class="how" style="margin-top:12px">רכישות בכסף אמיתי יופעלו בגרסת Google Play ו־App Store. דמויות ומבנים: KayKit מאת Kay Lousberg (CC0).</p>';
+  h+='</div><p class="how" style="margin-top:12px">רכישות בכסף אמיתי יופעלו בגרסת Google Play ו־App Store. דמויות ומבנים: KayKit מאת Kay Lousberg (CC0). מוזיקה: Tanner Helland (CC BY 4.0). אפקטים: Kenney ואחרים (CC0).</p>';
   box.innerHTML=h;
   box.querySelectorAll('[data-iap]').forEach(b=>b.onclick=async()=>{ac();const id=b.dataset.iap;const item=IAP.find(p=>p.id===id)||OFFERS[id];if(await Billing.buy(item))grant(item)});
   box.querySelectorAll('[data-skin]').forEach(b=>b.onclick=()=>{const key=b.dataset.skin;const [hid,sid]=key.split('_');const sk=skinDef(hid,sid);if(save.gems<sk.p)return;ac();save.gems-=sk.p;save.skins.own.push(key);save.skins.eq[hid]=sid;persist();sfx.fanfare();toast('🎭 '+sk.n+' שלך!');afterSkin(hid)});
   box.querySelectorAll('[data-eq]').forEach(b=>b.onclick=()=>{const [hid,sid]=b.dataset.eq.split('_');ac();save.skins.eq[hid]=sid;persist();sfx.build();afterSkin(hid)});
-  box.querySelectorAll('[data-ab]').forEach(b=>b.onclick=()=>{const id=b.dataset.ab;const lv=save.ab[id]||0;const c=AB_COST[lv];if(save.gems<c)return;ac();save.gems-=c;save.ab[id]=lv+1;persist();sfx.lvl();toast('✨ '+heroDef(id).ab.name+' שודרג לרמה '+(lv+1));renderMenu()});
+  box.querySelectorAll('[data-ab]').forEach(b=>b.onclick=()=>{const id=b.dataset.ab;const lv=save.ab[id]||0;const c=AB_COST[lv];if(save.gems<c)return;ac();save.gems-=c;save.ab[id]=lv+1;persist();sfx.lvl();toast('✨ '+heroDef(id).ab.name+' שודרג לרמה '+(lv+1));say('ability');renderMenu()});
   box.querySelectorAll('[data-boost]').forEach(b=>b.onclick=()=>{const k=b.dataset.boost;const bo=BOOSTS.find(x=>x.k===k);if(save.gems<bo.p)return;ac();save.gems-=bo.p;save.boost[k]++;persist();sfx.build();toast('⚡ '+bo.n+' מוכן לקרב הבא');renderMenu()});
   const vc=$('vipClaim');if(vc)vc.onclick=()=>{ac();save.vipDay=today();save.gems+=60;persist();sfx.win();toast('👑 +60 💎 ממנוי המלך');renderMenu()}}
 const SKINIMG={};
@@ -876,7 +959,7 @@ const PROJ={arrow:{geo:G.arrow,mat:M(0x5a3b1e)},fire:{geo:G.arrow,mat:new THREE.
 const projPool={arrow:[],fire:[],ball:[],earrow:[]},projs=[];
 function launch(type,sx,sy,sz,tgt,o){let m=projPool[type].pop();if(!m){m=new THREE.Mesh(PROJ[type].geo,PROJ[type].mat);fx.add(m)}m.visible=true;m.position.set(sx,sy,sz);
   const tp=tgt.g.position;const d=Math.hypot(tp.x-sx,tp.z-sz);
-  projs.push({type,m,sx,sy,sz,tgt,tx:tp.x,tz:tp.z,t:0,dur:Math.max(.12,d/(o.speed||24)),arc:o.arc!=null?o.arc:Math.min(2.2,d*.12),o});if(type!=='ball')sfx.shoot()}
+  projs.push({type,m,sx,sy,sz,tgt,tx:tp.x,tz:tp.z,t:0,dur:Math.max(.12,d/(o.speed||24)),arc:o.arc!=null?o.arc:Math.min(2.2,d*.12),o});if(type!=='ball')sfx.shoot(sx,sz)}
 function updProjs(dt){for(let i=projs.length-1;i>=0;i--){const a=projs[i];a.t+=dt/a.dur;
   if(a.tgt.alive!==false){a.tx=a.tgt.g.position.x;a.tz=a.tgt.g.position.z}
   const t=Math.min(1,a.t),ty=.7*(a.tgt.scale||1);
@@ -1061,7 +1144,7 @@ function drawPad(p){const c=p.ctx;c.clearRect(0,0,256,256);const on=p.active;con
   p.tex.needsUpdate=true}
 function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath()}
 function newStruct(d,extra){const g=new THREE.Group();g.position.set(d.struct[0],0,d.struct[1]);dyn.add(g);return Object.assign({g,level:0,cd:0,x:d.struct[0],z:d.struct[1],pop:0},extra||{})}
-function buildFromPad(p){p.level++;p.paid=0;p.isNew=false;const d=p.def;let fxPos=d.struct||[p.x,p.z];S.track.builds++;save.st.builds++;S.lastBuild=S.time;buzz([20,30,20]);
+function buildFromPad(p){p.level++;p.paid=0;p.isNew=false;const d=p.def;let fxPos=d.struct||[p.x,p.z];S.track.builds++;save.st.builds++;S.lastBuild=S.time;if(d.type==='tower'&&p.level>=2)say('tower');buzz([20,30,20]);
   if(d.type==='tower'||d.type==='cannon'||d.type==='mage'){if(!p.struct){p.struct=newStruct(d,{kind:d.type});towers.push(p.struct)}
     p.struct.level=p.level;(d.type==='tower'?buildTowerMesh:d.type==='cannon'?buildCannonMesh:buildMageMesh)(p.struct)}
   if(d.type==='wall'){if(!p.struct){const g=new THREE.Group();dyn.add(g);const c=d.center,pp=d.perp;const half=3.3;
@@ -1105,7 +1188,7 @@ function newRun(startCh){clearRun();startCh=startCh||0;
   keep={g:new THREE.Group(),level:0,hp:0,max:0,cd:0,pop:0};keep.max=Math.round(650*(1+save.meta.keep*.15));keep.hp=keep.max;dyn.add(keep.g);buildKeepMesh(keep);
   shadowify(keep.g);const hb=heroDef(save.hero),hlv=HL(hb.id).l;const hd=Object.assign({},hb,{dmg:hb.dmg*(1+.12*(hlv-1)),hp:Math.round(hb.hp*(1+.1*(hlv-1)))});S.hd=hd;S.abMax=hd.ab.cd;S.abCd=5;H=makeUnit(hd.model,hd.scale);if(ASSETS_READY&&HSPEC[hd.model]){const hm=heroModel(hd.model,eqSkin(hd.id));H.rig.add(hm.holder);H.hm=hm}
   {const al=save.ab[hd.id]||0;S.abPow=1+.25*al;S.abMax=hd.ab.cd*(1-.1*al)}
-  if(save.boost.gold2>0){save.boost.gold2--;S.goldMul=2;setTimeout(()=>toast('⚡ זהב כפול פעיל בקרב הזה!'),2600)}if(save.boost.perks3>0){save.boost.perks3--;S.pendingPerks+=3}if(save.boost.keep50>0){save.boost.keep50--;keep.max=Math.round(keep.max*1.5);keep.hp=keep.max}persist();applySquadSkin();H.g.position.set(0,0,6.5);H.hp=H.max=Math.round(hd.hp*(1+save.meta.hero*.15));
+  if(save.boost.gold2>0){save.boost.gold2--;S.goldMul=2;setTimeout(()=>toast('⚡ זהב כפול פעיל בקרב הזה!'),2600)}if(save.boost.perks3>0){save.boost.perks3--;S.pendingPerks+=3}if(save.boost.keep50>0){save.boost.keep50--;keep.max=Math.round(keep.max*1.5);keep.hp=keep.max}persist();applySquadSkin();setTimeout(()=>say('ready'),1400);H.g.position.set(0,0,6.5);H.hp=H.max=Math.round(hd.hp*(1+save.meta.hero*.15));
   const ab=$('abBtn');ab.hidden=false;ab.querySelector('.ico').textContent=hd.ab.e;ab.querySelector('.lbl').textContent=hd.ab.name;lastHud={};setMusic('calm');addBar(H,1.75,.9,barGreen);H.respawn=0;H.lastHit=99;heroRing.visible=true;
   pads=PAD_DEFS.map(makePad);
   const startSquad=3+save.meta.squad*2;for(let i=0;i<startSquad;i++)addSoldier('soldier',H.g.position.x+rand(-1,1),H.g.position.z+rand(-1,1));
@@ -1157,18 +1240,18 @@ function startWave(){S.wave++;S.phase='wave';S.wallLost=false;
   else if(n%5===0)banner('גל '+n+' — בוס!','משהו גדול בדרך...',2.4);
   else if(newPath)banner('גל '+n,'דרך חדשה נפתחה! שים עין על הדגל האדום',2.6);
   else banner('גל '+n,'הם באים!',1.4);
-  sfx.wave();$('goBtn').hidden=true;setMusic(n%5===0?'boss':'battle')}
+  sfx.wave();$('goBtn').hidden=true;setMusic(n%5===0?'boss':'battle');say((n===S.chapter*10+1||n%5===0)?'prepare':'wave')}
 function spawnEnemy(kind,pi,ox,oz,at){const P=PATHS[pi],def=EDEF[kind];const e=makeUnit(kind,def.scale);const s=at||P.pts[0];
   e.g.position.set(s[0]+(ox||0),0,s[1]+(oz||0));e.hp=e.max=Math.round(def.hp*S.hpMul);e.dmg=def.dmg*S.dmgMul;e.speed=def.speed*rand(.92,1.08);e.range=def.range;e.rate=def.rate;
   e.xp=def.xp;e.coins=def.coins;e.path=P;e.wp=at?Math.max(1,at.wp||1):1;e.lane=rand(-1.2,1.2);e.aggroT=rand(0,.3);e.target=null;e.rad=.38*def.scale;
   e.boss=kind==='boss'||kind==='warlord';e.armor=!!def.armor;e.ranged=!!def.ranged;e.bomb=!!def.bomb;e.summon=!!def.summon;e.sumT=5;
-  addBar(e,e.boss?1.75:1.55,e.boss?1.1:.75,barRed);if(e.boss){e.bar.visible=true;S.bosses++;sfx.boss();S.shake=.5}
+  addBar(e,e.boss?1.75:1.55,e.boss?1.1:.75,barRed);if(e.boss){e.bar.visible=true;S.bosses++;sfx.boss();S.shake=.5}else if(Math.random()<.12)sfx.grunt(e.g.position.x,e.g.position.z)
   e.goblin=!!def.goblin;if(e.goblin)e.bar.visible=true;
   if(!e.boss&&!e.goblin&&S.wave>=4&&Math.random()<.05){e.elite=true;e.hp=e.max=e.max*4;e.dmg*=1.5;e.scale*=1.25;e.g.scale.setScalar(e.scale);e.rad*=1.25;e.coins*=3;e.bar.visible=true;e.tint=[1.6,1.3,.55];
     const ring=new THREE.Mesh(G.ring,new THREE.MeshBasicMaterial({color:0xffd23a,transparent:true,opacity:.9,depthWrite:false}));ring.rotation.x=-Math.PI/2;ring.position.y=.06;ring.scale.setScalar(.5);e.g.add(ring);e.ring=ring}
   e.face=Math.atan2(-s[0],-s[1]);enemies.push(e);return e}
 function updWave(dt){
-  if(S.phase==='break'){S.breakT-=dt;$('goBtn').hidden=false;if(S.breakT<=0)startWave();return}
+  if(S.phase==='break'){if(S.breakT<8&&S.breakT>0)setMusic('tension');S.breakT-=dt;$('goBtn').hidden=false;if(S.breakT<=0)startWave();return}
   S.spawnT-=dt;
   if(S.gobT>0){S.gobT-=dt;if(S.gobT<=0)spawnGoblin()}if(S.dropT>0){S.dropT-=dt;if(S.dropT<=0)spawnDrop()}
   if(S.spawnT<=0&&S.queue.length){const pi=pick(openPaths());
@@ -1177,7 +1260,7 @@ function updWave(dt){
       while(i<gsz&&S.queue.length&&EDEF[S.queue[0]].scale<2.5){spawnEnemy(S.queue.shift(),pi,rand(-1.8,1.8),rand(-1.8,1.8));i++}
       S.spawnT=Math.max(.9,2.6-S.wave*.05)*rand(.8,1.2)}}
   if(!S.queue.length&&enemies.length===0)waveCleared()}
-function waveCleared(){S.phase='break';setMusic('calm');S.breakT=S.breakMax=15;const bonus=6+S.wave*2;S.track.waves++;if(!S.wallLost)S.track.cleanWaves++;
+function waveCleared(){S.phase='break';setMusic('calm');if(S.wave%5===0){stinger('victory',.9);say('victory',2)}S.breakT=S.breakMax=15;const bonus=6+S.wave*2;S.track.waves++;if(!S.wallLost)S.track.cleanWaves++;
   for(const w of walls){w.hp=w.max;if(!w.alive){w.alive=true;w.g.visible=true;w.fallT=0;for(const p of w.posts){p.rotation.set(0,0,0);p.visible=true}}}
   for(const s of soldiers)s.hp=s.max;H.hp=H.max;
   for(const c of coins)if(c.state===0)c.state=1;
@@ -1190,7 +1273,7 @@ function waveCleared(){S.phase='break';setMusic('calm');S.breakT=S.breakMax=15;c
   else if(fresh)banner('גל '+S.wave+' הושלם!','משטחי בנייה חדשים נפתחו',2.6);
   else banner('גל '+S.wave+' הושלם!','+'+bonus+' מטבעות בונוס',2);
   sfx.win()}
-function chapterComplete(){setMusic('menu');const ch=S.chapter;const reward=12+ch*8;save.crowns+=reward;S.crownsRun+=reward;save.chapter=Math.max(save.chapter,Math.min(3,ch+1));persist();
+function chapterComplete(){stinger('victory',.95);setTimeout(()=>say('victory',2),400);setMusic('menu');const ch=S.chapter;const reward=12+ch*8;save.crowns+=reward;S.crownsRun+=reward;save.chapter=Math.max(save.chapter,Math.min(3,ch+1));persist();
   const next=ch+1;const T=THEMES[next%4];
   $('chEy').textContent='פרק '+(ch+1)+' הושלם';$('chT').textContent=THEMES[ch%4].name+' שוחרר!';
   $('chS').textContent='המצביא נפל... הדרך ל'+T.name+' פתוחה. הבסיס והצבא שלך באים איתך, והמבנים יכולים לעלות עוד רמה.';
@@ -1228,11 +1311,11 @@ let toastT=0;function toast(t){const el=$('toast');el.textContent=t;el.classList
 function nearestEnemy(x,z,r,skip){let best=null,bd=r*r;for(const e of enemies){if(!e.alive||e===skip)continue;const dx=e.g.position.x-x,dz=e.g.position.z-z,d=dx*dx+dz*dz;if(d<bd){bd=d;best=e}}return best}
 function hurtEnemy(e,dmg,src,pierce){if(!e.alive)return;if(e.armor&&!pierce){dmg*=.3;if(Math.random()<.3){sfx.clang();floatText(e.g.position.x,1.6,e.g.position.z,'🛡','blk')}}
   dmg=Math.max(1,Math.round(dmg));e.hp-=dmg;if(e.goblin&&Math.random()<.5)dropCoins(e.g.position.x,e.g.position.z,1);e.hitT=.12;flash(e);if(e.bar)e.bar.visible=true;
-  if((src==='hero'&&Math.random()<.6)||e.boss||Math.random()<.25)floatText(e.g.position.x,1.6*e.scale,e.g.position.z,'-'+dmg,e.boss?'ftbig':'');sfx.hit();
+  if((src==='hero'&&Math.random()<.6)||e.boss||Math.random()<.25)floatText(e.g.position.x,1.6*e.scale,e.g.position.z,'-'+dmg,e.boss?'ftbig':'');sfx.hit(e.g.position.x,e.g.position.z);
   if(e.hp<=0)killEnemy(e,src)}
 function killEnemy(e,src){e.alive=false;e.dieT=0;dying.push(e);if(e.bar)e.bar.visible=false;S.kills++;S.track.kills++;if(src==='hero')S.track.heroKills++;
   const p=e.g.position;let nc=e.coins+(Math.random()<.3?1:0);if(S.hd.id==='goldi')nc=Math.round(nc*1.3+Math.random()*.6);if(S.furyT>0)nc*=2;dropCoins(p.x,p.z,nc);save.st.kills++;
-  S.combo=S.comboT>0?S.combo+1:1;S.comboT=1.3;if(S.combo>=10&&S.combo%10===0){floatText(H.g.position.x,3,H.g.position.z,'קומבו x'+S.combo+'!','ftbig');addGold(Math.floor(S.combo/5));sfx.quest()}puff(p.x,.6*e.scale,p.z,0xd7302c,e.boss?24:5);sfx.die();
+  S.combo=S.comboT>0?S.combo+1:1;S.comboT=1.3;if(S.combo>=10&&S.combo%10===0){floatText(H.g.position.x,3,H.g.position.z,'קומבו x'+S.combo+'!','ftbig');addGold(Math.floor(S.combo/5));sfx.quest()}puff(p.x,.6*e.scale,p.z,0xd7302c,e.boss?24:5);sfx.die(p.x,p.z,e.boss||e.kind==='brute');
   if(e.boss){S.shake=.8;S.slow=.9;buzz([60,40,90]);S.track.bossKills++;save.st.bosses++;spawnChest(p.x,p.z,e.kind==='warlord'?'gold':'silver');banner(e.kind==='warlord'?'המצביא הובס!':'הבוס הובס!','החץ פגע במטרה',2);shock(p.x,p.z,6,0xffc83a)}
   if(e.elite){dropGems(p.x,p.z,1);if(Math.random()<.2)spawnChest(p.x,p.z,'wood')}
   if(e.goblin){dropGems(p.x,p.z,3);banner('תפסת את הגובלין!','💰 שלל ענק',1.8);sfx.fanfare()}
@@ -1244,9 +1327,9 @@ function hurtAlly(u,d){if(!u.alive)return;if(u===H&&S.spin>0)return;if(u===H)buz
   if(u.hp<=0){u.alive=false;if(u===H){H.respawn=4.5;H.g.visible=false;heroRing.visible=false;puff(H.g.position.x,.8,H.g.position.z,0x2f6fd0,14);banner('נפלת!','חוזר למבצר בעוד רגע...',1.8);
       const lost=Math.floor(S.gold*.2);if(lost>0){S.gold-=lost;dropCoins(H.g.position.x,H.g.position.z,Math.min(lost,60))}}
     else{puff(u.g.position.x,.6,u.g.position.z,0xf1efe9,6);u.dieT=0;dying.push(u)}}}
-function hurtKeep(d){keep.hp-=d;keep.hit=.15;if(Math.random()<.3)floatText(rand(-1.5,1.5),3.6,rand(-1.5,1.5),'-'+Math.round(d),'');
+function hurtKeep(d){keep.hp-=d;keep.hit=.15;sfx.keep();if(S.phase==='wave'&&keep.hp<keep.max*.95)say('attack');if(Math.random()<.3)floatText(rand(-1.5,1.5),3.6,rand(-1.5,1.5),'-'+Math.round(d),'');
   if(keep.hp<=0&&!S.over){keep.hp=0;gameOver()}}
-function hurtWall(w,d){if(!w.alive)return;w.hp-=d;w.shake=.15;w.bar.visible=true;sfx.wall();if(w.hp<=0){w.alive=false;w.bar.visible=false;S.wallLost=true;
+function hurtWall(w,d){if(!w.alive)return;w.hp-=d;w.shake=.15;w.bar.visible=true;sfx.wall(w.a.x,w.a.z,w.level>=3);if(w.hp<=0){w.alive=false;w.bar.visible=false;S.wallLost=true;sfx.wallbreak(w.a.x,w.a.z);
   const cx=(w.a.x+w.b.x)/2,cz=(w.a.z+w.b.z)/2;puff(cx,.8,cz,0x8a5a33,16);w.fallT=0;S.shake=Math.max(S.shake,.3);floatText(cx,2,cz,'החומה נפרצה!','ftbig')}}
 function wallBlock(x,z,r){for(const w of walls){if(!w.alive||w.level===0)continue;if(segDist(x,z,w.a.x,w.a.z,w.b.x,w.b.z)<r+.35)return w}return null}
 function closestOnSeg(x,z,w){const ax=w.a.x,az=w.a.z,dx=w.b.x-ax,dz=w.b.z-az;let t=((x-ax)*dx+(z-az)*dz)/(dx*dx+dz*dz);t=clamp(t,0,1);return[ax+dx*t,az+dz*t]}
@@ -1271,7 +1354,7 @@ function updHero(dt){
   if(r<KEEP_R+.6&&r>0){p.x*=(KEEP_R+.6)/r;p.z*=(KEEP_R+.6)/r}
   H.lastHit+=dt;if(H.lastHit>3&&H.hp<H.max)H.hp=Math.min(H.max,H.hp+H.max*.06*dt);
   H.bar.visible=H.hp<H.max;
-  if(H.moving)S.tutMoved+=S.stats.speed*dt;
+  if(H.moving){S.tutMoved+=S.stats.speed*dt;H.stepT=(H.stepT||0)-dt;if(H.stepT<=0){H.stepT=.3;sfx.step()}}
   heroAttack(dt,p);
   animUnit(H,dt);if(S.spin>0)H.rig.rotation.y=S.time*22;heroAnimUpd(H,dt);
   const ext=soldiers.length?Math.min(6,1.35+Math.sqrt(soldiers.length)*.42):1.1;heroRing.position.x=p.x;heroRing.position.z=p.z;heroRing.scale.setScalar(ext+.3)}
@@ -1294,7 +1377,7 @@ function applyReward(x,inRun){if(x.k==='gold'&&S&&H&&inRun){const k=Math.min(25,
 function cardFace(x){if(x.k==='gold')return `<span class="e">🪙</span><b>+${x.n}</b><small>זהב</small>`;if(x.k==='gems')return `<span class="e">💎</span><b>+${x.n}</b><small>יהלומים</small>`;
   if(x.k==='crowns')return `<span class="e">👑</span><b>+${x.n}</b><small>כתרים</small>`;const h=heroDef(x.h);return `<img src="${PORTR[h.model]||''}" alt=""><b>+${x.n}</b><small>קלפי ${h.name}</small>`}
 let chestDone=null,chestRun=false;
-function openChest(tier,inRun,done){const c=CHEST[tier];const rw=rollChest(tier,inRun);chestDone=done||null;chestRun=!!inRun;save.st.chests++;
+function openChest(tier,inRun,done){sfx.chest();const c=CHEST[tier];const rw=rollChest(tier,inRun);chestDone=done||null;chestRun=!!inRun;save.st.chests++;
   for(const x of rw)applyReward(x,inRun);persist();
   $('chT2').textContent=c.n;const bc=$('bigChest');bc.textContent=c.e;bc.style.animation='none';void bc.offsetWidth;bc.style.animation='';
   const box=$('chCards');box.innerHTML='';$('chTake').hidden=true;
@@ -1363,11 +1446,11 @@ function updAbility(dt){if(S.abCd>0)S.abCd=Math.max(0,S.abCd-dt);
   const b=$('abBtn');const ready=S.abCd<=0&&H.alive;const pct=Math.round(S.abCd/S.abMax*100);const sig=pct+'|'+ready;
   if(lastHud.ab!==sig){lastHud.ab=sig;b.style.setProperty('--p',pct+'%');b.classList.toggle('ready',ready);b.querySelector('.sec').textContent=S.abCd>0?Math.ceil(S.abCd):''}
   if(S.rain){S.rain.t-=dt;S.rain.acc+=dt*26;const hp=H.g.position;while(S.rain.acc>=1){S.rain.acc--;const e=randEnemyNear(hp.x,hp.z,12);if(e)launch('fire',e.g.position.x+rand(-2,2),13,e.g.position.z-3,e,{dmg:26*S.stats.dmg*S.abPow,src:'hero',pierce:true,splash:.4,splashR:1.4,arc:0,speed:28})}if(S.rain.t<=0)S.rain=null}
-  if(S.spin>0){S.spin-=dt;S.spinT-=dt;if(S.spinT<=0){S.spinT=.2;const hp=H.g.position;for(const e of enemies){if(!e.alive)continue;const dx=e.g.position.x-hp.x,dz=e.g.position.z-hp.z,d=Math.hypot(dx,dz);
+  if(S.spin>0){S.spin-=dt;S.spinT-=dt;if(S.spinT<=0){S.spinT=.2;sfx.whirl(H.g.position.x,H.g.position.z);const hp=H.g.position;for(const e of enemies){if(!e.alive)continue;const dx=e.g.position.x-hp.x,dz=e.g.position.z-hp.z,d=Math.hypot(dx,dz);
       if(d<3.4){hurtEnemy(e,30*S.stats.dmg*S.abPow,'hero',true);if(!e.boss&&d>.01){e.g.position.x+=dx/d*.55;e.g.position.z+=dz/d*.55}}}shock(hp.x,hp.z,3.4,0xdfe6ec);sfx.sword()}}
   if(S.meteor){const m=S.meteor;m.t+=dt/.75;const t=Math.min(1,m.t);m.mesh.position.set(m.x+6*(1-t),.5+16*(1-t),m.z-6*(1-t));if(Math.random()<.7)puff(m.mesh.position.x,m.mesh.position.y,m.mesh.position.z,0xff8a1f,1);
     if(m.t>=1){fx.remove(m.mesh);for(const e of enemies){if(e.alive&&Math.hypot(e.g.position.x-m.x,e.g.position.z-m.z)<4.6)hurtEnemy(e,(260+S.wave*14)*S.stats.dmg*S.abPow,'hero',true)}
-      shock(m.x,m.z,8,0xff6a1f);shock(m.x,m.z,5,0xffd84a);puff(m.x,.5,m.z,0xff8a1f,30);puff(m.x,.5,m.z,0x444444,16);S.shake=1;sfx.slam();sfx.boom();buzz(90);S.meteor=null}}}
+      shock(m.x,m.z,8,0xff6a1f);sfx.fire(m.x,m.z);shock(m.x,m.z,5,0xffd84a);puff(m.x,.5,m.z,0xff8a1f,30);puff(m.x,.5,m.z,0x444444,16);S.shake=1;sfx.slam();sfx.boom();buzz(90);S.meteor=null}}}
 /* tutorial + guide arrow */
 const TUT=[{t:'👆 גרור את האצבע על המסך כדי לזוז',done:()=>S.tutMoved>5},{t:'🪙 לך למשטח שהחץ הצהוב מראה ועמוד עליו כדי לבנות',done:()=>S.track.builds>=1},
   {t:'⚔️ הצבא יורה לבד. אסוף את המטבעות שהאויבים מפילים',done:()=>S.track.goldGained>=25},{t:'✨ לחץ על הכפתור העגול למטה להפעיל את היכולת המיוחדת',done:()=>S.abUsed>0||S.wave>=3},{t:'🏰 שמור על המבצר! כל 10 גלים מחכה מצביא',done:()=>S.wave>=3}];
@@ -1544,7 +1627,7 @@ function openPerks(){const box=$('perkBox');box.innerHTML='';const avail=PERKS.f
   paused=true;$('perkO').hidden=false;sfx.lvl();resetJoy()}
 
 /* ================= game over / menu ================= */
-function gameOver(){S.over=true;setMusic('menu');$('abBtn').hidden=true;$('tut').hidden=true;$('guideArrow').hidden=true;guide.visible=false;buzz([80,50,120]);S.overT=2.2;puff(0,2,0,0xc4bba8,40);puff(0,3,0,0xff8a1f,20);S.shake=1.2;sfx.slam();keep.g.visible=false;banner('המבצר נפל!','',2)}
+function gameOver(){S.over=true;if(AUD.cur)fadeTo(AUD.cur,0,1);AUD.cur=null;stinger('defeat',.9);setTimeout(()=>say('fall',2),600);setTimeout(()=>setMusic('menu'),7000);$('abBtn').hidden=true;$('tut').hidden=true;$('guideArrow').hidden=true;guide.visible=false;buzz([80,50,120]);S.overT=2.2;puff(0,2,0,0xc4bba8,40);puff(0,3,0,0xff8a1f,20);S.shake=1.2;sfx.slam();keep.g.visible=false;banner('המבצר נפל!','',2)}
 function showOver(){const cleared=Math.max(0,S.wave-1);const tot=Math.max(1,(cleared-S.chapter*10)*2+Math.floor(S.kills/25));const give=tot-S.crownsPaid;S.crownsPaid=tot;save.crowns+=give;if(cleared>save.best)save.best=cleared;persist();
   $('overSub').textContent='שרדת עד גל '+cleared+' · פרק '+(S.chapter+1);
   $('overStats').innerHTML=`<span>אויבים: <b>${S.kills}</b></span><span>רמה: <b>${S.lvl}</b></span><span class="crownTag">👑 +${tot+S.crownsRun}</span><span class="crownTag gemTag">💎 +${S.gemsRun}</span>`;
@@ -1585,7 +1668,7 @@ function renderMenu(){$('mBest').textContent=save.best;$('mCrowns').textContent=
     const bx=document.createElement('div');bx.className='hbtns';
     const b=document.createElement('button');b.id='hero-'+h.id;
     if(sel){b.textContent='נבחר ✔';b.disabled=true}else if(own)b.textContent='בחר';else if(L.s>=10)b.textContent='פתח · 🃏10';else{b.textContent='👑 '+h.cost;b.disabled=save.crowns<h.cost}
-    b.onclick=()=>{ac();if(!own){if(L.s>=10)L.s-=10;else{if(save.crowns<h.cost)return;save.crowns-=h.cost}save.owned.push(h.id);sfx.lvl();toast('🎉 '+h.name+' הצטרף לצבא!')}else sfx.build();save.hero=h.id;persist();renderMenu()};bx.appendChild(b);
+    b.onclick=()=>{ac();if(!own){if(L.s>=10)L.s-=10;else{if(save.crowns<h.cost)return;save.crowns-=h.cost}save.owned.push(h.id);sfx.lvl();toast('🎉 '+h.name+' הצטרף לצבא!');say('ability')}else sfx.build();save.hero=h.id;persist();renderMenu()};bx.appendChild(b);
     if(own&&L.l<10){const u=document.createElement('button');u.className='up';u.id='up-'+h.id;u.textContent='⬆ רמה '+(L.l+1)+' · 👑'+upCost(L.l);u.disabled=L.s<need||save.crowns<upCost(L.l);
       u.onclick=()=>{if(L.s<need||save.crowns<upCost(L.l))return;ac();save.crowns-=upCost(L.l);L.s-=need;L.l++;persist();sfx.fanfare();toast('⬆ '+h.name+' עלה לרמה '+L.l+'! נזק וחיים גבוהים יותר');renderMenu()};bx.appendChild(u)}
     d.appendChild(bx);hb.appendChild(d)}
@@ -1639,14 +1722,18 @@ setInterval(()=>{if(!$('menu').hidden)renderTreasure()},30000);
 let deferredPrompt=null;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;$('installBtn').hidden=false});
 $('installBtn').onclick=async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();try{await deferredPrompt.userChoice}catch(e){}deferredPrompt=null;$('installBtn').hidden=true};
 if(window.__PWA&&/iphone|ipad|ipod/i.test(navigator.userAgent)&&!(window.matchMedia('(display-mode: standalone)').matches||navigator.standalone))$('iosHint').hidden=false;
-const SETS=[['music','🎵 מוזיקה'],['sfx','🔊 אפקטים'],['vib','📳 רטט'],['gfx','✨ גרפיקה']];
-function renderSet(){for(const [k,l] of SETS){const v=save.set[k];$('s-'+k).innerHTML=`<span>${l}</span><span class="tg ${v?'on':''}">${k==='gfx'?(v?'גבוהה':'חסכונית'):(v?'פועל':'כבוי')}</span>`}}
-function applySet(){if(sfxBus)sfxBus.gain.value=save.set.sfx?.9:0;if(musBus)musBus.gain.value=save.set.music?.5:0;outlineMat.visible=instOut.visible=!!save.set.gfx;
+const SETS=[['vib','📳 רטט'],['gfx','✨ גרפיקה']];
+function renderSet(){for(const k of['music','sfx','voice','amb'])$('vol-'+k).value=Math.round(save.vol[k]*100);$('s-mute').innerHTML=`<span>🔇 השתקת הכל</span><span class="tg ${save.vol.mute?'on':''}">${save.vol.mute?'מושתק':'כבוי'}</span>`;for(const [k,l] of SETS){const v=save.set[k];$('s-'+k).innerHTML=`<span>${l}</span><span class="tg ${v?'on':''}">${k==='gfx'?(v?'גבוהה':'חסכונית'):(v?'פועל':'כבוי')}</span>`}}
+function applySet(){applyVol();outlineMat.visible=instOut.visible=!!save.set.gfx;
   const sh=!!save.set.gfx;if(renderer.shadowMap.enabled!==sh){renderer.shadowMap.enabled=sh;scene.traverse(o=>{if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.needsUpdate=true)}})}shadowMat.visible=!sh;renderer.setPixelRatio(save.set.gfx?Math.min(window.devicePixelRatio||1,1.75):1);resize()}
+for(const k of['music','sfx','voice','amb'])$('vol-'+k).oninput=e=>{ac();save.vol[k]=e.target.value/100;applyVol();if(k==='sfx')play('coin',{vol:.5});if(k==='voice')say('ready',3)};
+for(const k of['music','sfx','voice','amb'])$('vol-'+k).onchange=()=>persist();
+$('s-mute').onclick=()=>{save.vol.mute=save.vol.mute?0:1;persist();ac();applyVol();renderSet();$('muteBtn2').textContent=save.vol.mute?'🔇':'🔊'};
 for(const [k] of SETS)$('s-'+k).onclick=()=>{save.set[k]=save.set[k]?0:1;persist();ac();applySet();renderSet();sfx.pay()};
 let setFromGame=false;
 function openSet(fromGame){setFromGame=fromGame;renderSet();$('setQuit').hidden=!fromGame;$('setO').hidden=false;if(fromGame){paused=true;resetJoy()}}
 $('setBtn').onclick=()=>{if(!S||S.over||!$('menu').hidden||!$('perkO').hidden||!$('chapO').hidden)return;openSet(true)};
+$('muteBtn2').onclick=()=>{save.vol.mute=save.vol.mute?0:1;persist();ac();applyVol();$('muteBtn2').textContent=save.vol.mute?'🔇':'🔊'};$('muteBtn2').textContent=save.vol.mute?'🔇':'🔊';
 $('menuSet').onclick=()=>{ac();openSet(false)};
 $('setClose').onclick=()=>{$('setO').hidden=true;if(setFromGame&&$('pauseO').hidden)paused=false};
 $('setQuit').onclick=()=>{$('setO').hidden=true;toMenu()};
@@ -1678,14 +1765,14 @@ function frame(now){requestAnimationFrame(frame);let dt=(now-last)/1000;last=now
   if(S&&!paused&&S.slow>0){S.slow-=dt;dt*=.35}
   if(S&&!paused){
     S.time+=dt;S.hurtFlash=Math.max(0,S.hurtFlash-dt);
-    if(!S.over){updHero(dt);updSquad(dt);updEnemies(dt);updStructures(dt);updPads(dt);updWave(dt);updQuests(dt);updAbility(dt);updGuide();updTut();updGems(dt);updDrops(dt);updChests(dt);updFury(dt);
-      S.comboT-=dt;if(S.phase==='wave'&&keep.hp<keep.max*.3&&!S.keepWarn){S.keepWarn=true;banner('המבצר בסכנה!','חזור להגן עליו',2);buzz([100,60,100])}}
+    if(!S.over){updHero(dt);updSquad(dt);updEnemies(dt);updStructures(dt);updPads(dt);updWave(dt);updQuests(dt);updAbility(dt);updGuide();updTut();updAudioFrame();updGems(dt);updDrops(dt);updChests(dt);updFury(dt);
+      S.comboT-=dt;if(S.phase==='wave'&&keep.hp<keep.max*.3&&!S.keepWarn){S.keepWarn=true;banner('המבצר בסכנה!','חזור להגן עליו',2);buzz([100,60,100]);say('danger',2);sfx.wave()}}
     else{S.overT-=dt;updEnemies(dt);if(S.overT<=0&&$('overO').hidden&&$('menu').hidden)showOver()}
     updProjs(dt);updCoins(dt);updParts(dt);updRings(dt);updBolts(dt);updDying(dt);updPortals();updStack();updCamera(dt);updHud();
     if(S.pendingPerks>0&&!S.over){S.perkDelay-=dt;if(S.perkDelay<=0)openPerks()}
     if(bannerT>0){bannerT-=dt;if(bannerT<=0)$('banner').classList.remove('on')}
   }else if(!S||S.over&&!$('menu').hidden){const t=now/1000;camera.position.set(Math.sin(t*.1)*5,11,13);camera.lookAt(0,1.2,3);sun.position.set(-12,32,18);sun.target.position.set(0,0,2)}
-  for(const m of MENU_MIX)m.update(rdt);updClouds(rdt);
+  for(const m of MENU_MIX)m.update(rdt);updClouds(rdt);if(!S||S.over)updAudioFrame();
   if(toastT>0){toastT-=rdt;if(toastT<=0)$('toast').classList.remove('on')}
   updFloats(paused?0:dt);
   renderUnits();renderer.render(scene,camera)}
@@ -1705,7 +1792,7 @@ requestAnimationFrame(frame);
   try{if(!(THREE.GLTFLoader&&THREE.SkeletonUtils))throw new Error('no loader');await loadAssets(p=>{bar.style.width=Math.round(p*100)+'%'},t=>{txt.textContent=t});
     decorateWorld();preview();}catch(e){console.warn('assets fallback',e)}
   try{makePortraits()}catch(e){}renderMenu();$('loadO').hidden=true})();
-window.__game={renderer,camera,killKeep:()=>hurtKeep(1e7),setCam:(y,z)=>{camDist={y,z}},applyTheme,useAbility,heroDef,openChest,spawnChest:(t)=>spawnChest(H.g.position.x+2,H.g.position.z,t),spawnGoblin:()=>spawnGoblin(),spawnDrop:()=>spawnDrop(),startFury:()=>startFury(),IP,iconShot:(k,w,h)=>{const r=new THREE.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});r.setPixelRatio(1);r.setSize(w,h);const sc=new THREE.Scene();sc.add(new THREE.HemisphereLight(0xfff3dc,0x6b5a3a,.95));const dl=new THREE.DirectionalLight(0xffffff,.7);dl.position.set(2,4,5);sc.add(dl);const cam=new THREE.PerspectiveCamera(26,w/h,.1,50);const g=modelGroup(k);g.rotation.y=-.35;sc.add(g);const bb=new THREE.Box3().setFromObject(g);const hh=bb.max.y-bb.min.y;cam.position.set(0,bb.min.y+hh*.55,hh*2.55);cam.lookAt(0,bb.min.y+hh*.5,0);r.render(sc,cam);return r.domElement.toDataURL('image/png')},get S(){return S},get enemies(){return enemies},get pads(){return pads},get H(){return H},get soldiers(){return soldiers},input,forceWave:()=>{if(S)S.breakT=0},spawn:(k)=>spawnEnemy(k,0,0,0,[H.g.position.x+3,H.g.position.z-3])};
+window.__AUD=AUD;window.__game={renderer,camera,killKeep:()=>hurtKeep(1e7),setCam:(y,z)=>{camDist={y,z}},applyTheme,useAbility,heroDef,openChest,spawnChest:(t)=>spawnChest(H.g.position.x+2,H.g.position.z,t),spawnGoblin:()=>spawnGoblin(),spawnDrop:()=>spawnDrop(),startFury:()=>startFury(),IP,iconShot:(k,w,h)=>{const r=new THREE.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});r.setPixelRatio(1);r.setSize(w,h);const sc=new THREE.Scene();sc.add(new THREE.HemisphereLight(0xfff3dc,0x6b5a3a,.95));const dl=new THREE.DirectionalLight(0xffffff,.7);dl.position.set(2,4,5);sc.add(dl);const cam=new THREE.PerspectiveCamera(26,w/h,.1,50);const g=modelGroup(k);g.rotation.y=-.35;sc.add(g);const bb=new THREE.Box3().setFromObject(g);const hh=bb.max.y-bb.min.y;cam.position.set(0,bb.min.y+hh*.55,hh*2.55);cam.lookAt(0,bb.min.y+hh*.5,0);r.render(sc,cam);return r.domElement.toDataURL('image/png')},get S(){return S},get enemies(){return enemies},get pads(){return pads},get H(){return H},get soldiers(){return soldiers},input,forceWave:()=>{if(S)S.breakT=0},spawn:(k)=>spawnEnemy(k,0,0,0,[H.g.position.x+3,H.g.position.z-3])};
 })();
 </script>
 
