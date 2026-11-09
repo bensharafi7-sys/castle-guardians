@@ -1,16 +1,79 @@
 {
-  "_doc": "Art track manifest. Every slot needs a file + license. Supported: .glb / .gltf / .json (embedded glTF) / .fbx for models; .jpg/.png/.webp for textures; HDRI as {type:'rgbe-hdr',data:base64} json or .hdr",
-  "warrior": { "file": "dwarf.model.json", "license": "CC BY 4.0 — \"Dwarf Warrior\" by Northcliffe (Sketchfab), glTF by J-Ponzo", "height": 1.75, "rawHeight": 3.8, "anims": { "idle": "Idle", "attack": "Attack" } },
-  "enemy":   { "file": null, "license": null, "height": 1.8, "anims": { "idle": "Idle", "attack": "Attack" }, "stand_in": "recolor-of-warrior" },
-  "hdri":    { "file": "noon_grass_1k.json", "license": "CC0 — Poly Haven \"Noon Grass\"" },
-  "terrain": {
-    "grass": { "albedo": null, "normal": null, "roughness": null, "license": null },
-    "soil":  { "albedo": null, "normal": null, "roughness": null, "license": null },
-    "rock":  { "albedo": null, "normal": null, "roughness": null, "license": null }
+ "_doc": "Art track manifest. Every slot needs a file + license. Supported: .glb / .gltf / .json (embedded glTF) / .fbx for models; .jpg/.png/.webp for textures; HDRI as {type:'rgbe-hdr',data:base64} json or .hdr",
+ "warrior": {
+  "file": "dwarf.model.json",
+  "license": "CC BY 4.0 — \"Dwarf Warrior\" by Northcliffe (Sketchfab), glTF by J-Ponzo",
+  "height": 1.75,
+  "rawHeight": 3.8,
+  "anims": {
+   "idle": "Idle",
+   "attack": "Attack"
   },
-  "props": {
-    "boulder":  { "file": null, "license": null },
-    "tree":     { "file": null, "license": null },
-    "building": { "file": null, "license": null }
+  "lods": [
+   "dwarf.model.json",
+   "dwarf_lod1.model.json",
+   "dwarf_lod2.model.json"
+  ]
+ },
+ "enemy": {
+  "file": null,
+  "license": null,
+  "height": 1.8,
+  "anims": {
+   "idle": "Idle",
+   "attack": "Attack"
+  },
+  "stand_in": "recolor-of-warrior"
+ },
+ "hdri": {
+  "file": "noon_grass_1k.json",
+  "license": "CC0 — Poly Haven \"Noon Grass\""
+ },
+ "terrain": {
+  "grass": {
+   "albedo": null,
+   "normal": null,
+   "roughness": null,
+   "license": null
+  },
+  "soil": {
+   "albedo": null,
+   "normal": null,
+   "roughness": null,
+   "license": null
+  },
+  "rock": {
+   "albedo": null,
+   "normal": null,
+   "roughness": null,
+   "license": null
   }
+ },
+ "props": {
+  "boulder": {
+   "file": null,
+   "license": null
+  },
+  "tree": {
+   "file": null,
+   "license": null
+  },
+  "building": {
+   "file": null,
+   "license": null
+  }
+ },
+ "knight": {
+  "file": null,
+  "license": null,
+  "height": 1.85,
+  "anims": {
+   "idle": "Idle",
+   "walk": "Walk",
+   "attack": "Attack",
+   "hit": "Hit",
+   "death": "Death"
+  },
+  "_wanted": "human knight, semi-realistic, full plate armour, rigged, <=15k tris, 1 texture set"
+ }
 }

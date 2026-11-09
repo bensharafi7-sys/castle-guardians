@@ -11,7 +11,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px/1
 .bar button.on{border-color:var(--gold);color:var(--gold)}
 #rep{position:fixed;left:12px;bottom:12px;z-index:6;background:var(--panel);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:12px 14px;max-width:min(560px,92vw);max-height:56vh;overflow:auto;display:none}
 #rep.on{display:block}#rep h3{margin:0 0 6px;font-size:14px}#rep table{border-collapse:collapse;width:100%}#rep td{padding:4px 6px;border-bottom:1px solid rgba(255,255,255,.08);vertical-align:top;font-size:12.5px}
-#rep .ok{color:var(--ok)}#rep .bad{color:var(--bad)}#rep .lic{color:var(--muted);font-size:11px;direction:ltr;text-align:left}
+#rep .ok{color:var(--ok)}#rep .miss{color:#ffd27a}#rep .bad{color:var(--bad)}#rep .lic{color:var(--muted);font-size:11px;direction:ltr;text-align:left}
 #load{position:fixed;inset:0;display:grid;place-items:center;background:var(--bg);z-index:9;font:600 15px system-ui;color:var(--muted)}
 #who{position:fixed;right:12px;bottom:calc(max(12px,env(safe-area-inset-bottom)) + 40px);z-index:5;background:var(--panel);padding:8px 12px;border-radius:10px;font:600 12.5px/1.6 system-ui}#who .ok{color:var(--ok)}#who .bad{color:var(--bad)}
 #stat{position:fixed;right:12px;bottom:12px;z-index:5;background:var(--panel);padding:6px 10px;border-radius:8px;font:12px ui-monospace,monospace;color:var(--muted);direction:ltr}
@@ -19,7 +19,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px/1
 <div id="load">טוען נכסים איכותיים…</div>
 <canvas id="c"></canvas>
 <div class="bar"><span class="t">ART LAB · SEMI-REALISTIC</span>
-  <button id="bGame">מצלמת משחק</button><button id="bClose" class="on">תקריב לוחם</button><button id="bEnemy">תקריב אויב</button><button id="bRep">דוח נכסים</button></div>
+  <button id="bGame">מצלמת משחק</button><button id="bClose" class="on">תקריב לוחם</button><button id="bEnemy">תקריב אויב</button><button id="bArmy">צבא ×30</button><button id="bRep">דוח נכסים</button></div>
 <div id="rep"></div><div id="stat"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
@@ -78,7 +78,7 @@ const PATH=[[0,-38],[2,-26],[-1,-16],[1,-7],[0,0]];
 function distPath(x,z){let m=1e9;for(let i=0;i<PATH.length-1;i++){const [ax,az]=PATH[i],[bx,bz]=PATH[i+1];const dx=bx-ax,dz=bz-az;const t=Math.max(0,Math.min(1,((x-ax)*dx+(z-az)*dz)/(dx*dx+dz*dz)));m=Math.min(m,Math.hypot(x-ax-dx*t,z-az-dz*t))}return m}
 function heightAt(x,z){const r=Math.hypot(x,z*1.1);const hills=Math.pow(fbm(x*.035+3,z*.035+7,5),1.6)*14;const mask=THREE.MathUtils.smoothstep(r,13,30);const bumps=(fbm(x*.25,z*.25,3)-.5)*.35;
   const road=1-THREE.MathUtils.smoothstep(distPath(x,z),1.6,4.5);return (hills*mask+bumps*(.4+.6*mask))*(1-road*.85)-road*.08}
-function buildTerrain(L){const S=96,N=192;const g=new THREE.PlaneGeometry(S,S,N,N);g.rotateX(-Math.PI/2);const p=g.attributes.position;
+function buildTerrain(L){const S=96,N=128;const g=new THREE.PlaneGeometry(S,S,N,N);g.rotateX(-Math.PI/2);const p=g.attributes.position;
   for(let i=0;i<p.count;i++){const x=p.getX(i),z=p.getZ(i);p.setY(i,heightAt(x,z))}g.computeVertexNormals();
   const road=new Float32Array(p.count);for(let i=0;i<p.count;i++)road[i]=1-THREE.MathUtils.smoothstep(distPath(p.getX(i),p.getZ(i)),1.3,3.2);g.setAttribute('road',new THREE.BufferAttribute(road,1));
   const m=new THREE.MeshStandardMaterial({color:0xffffff,roughness:1,metalness:0,envMapIntensity:.35});
@@ -106,7 +106,7 @@ function buildTerrain(L){const S=96,N=192;const g=new THREE.PlaneGeometry(S,S,N,
 /* ---------- grass: dense thin blades, natural colour variation, wind ---------- */
 const WIND={value:0};
 function buildGrass(){const blade=new THREE.BufferGeometry();const P=[],C=[];const segs=2;
-  for(let b=0;b<4;b++){const a=b/4*6.28+Math.random(),r=Math.random()*.1,h=.16+Math.random()*.2,w=.016,lean=(Math.random()-.5)*.35,bx=Math.cos(a)*r,bz=Math.sin(a)*r,ox=Math.cos(a+1.57)*w,oz=Math.sin(a+1.57)*w,lx=Math.cos(a)*lean,lz=Math.sin(a)*lean;
+  for(let b=0;b<3;b++){const a=b/3*6.28+Math.random(),r=Math.random()*.1,h=.16+Math.random()*.2,w=.016,lean=(Math.random()-.5)*.35,bx=Math.cos(a)*r,bz=Math.sin(a)*r,ox=Math.cos(a+1.57)*w,oz=Math.sin(a+1.57)*w,lx=Math.cos(a)*lean,lz=Math.sin(a)*lean;
     for(let s=0;s<segs;s++){const t0=s/segs,t1=(s+1)/segs,k0=1-t0,k1=1-t1;const y0=h*t0,y1=h*t1,c0=.55+.4*t0,c1=.55+.4*t1;
       const p0=[bx+lx*t0*t0-ox*k0,y0,bz+lz*t0*t0-oz*k0],p1=[bx+lx*t0*t0+ox*k0,y0,bz+lz*t0*t0+oz*k0],p2=[bx+lx*t1*t1-ox*k1,y1,bz+lz*t1*t1-oz*k1],p3=[bx+lx*t1*t1+ox*k1,y1,bz+lz*t1*t1+oz*k1];
       P.push(...p0,...p1,...p2,...p1,...p3,...p2);C.push(c0,c0,c0,c0,c0,c0,c1,c1,c1,c0,c0,c0,c1,c1,c1,c1,c1,c1)}}
@@ -115,7 +115,7 @@ function buildGrass(){const blade=new THREE.BufferGeometry();const P=[],C=[];con
   const mat=new THREE.MeshStandardMaterial({vertexColors:true,color:0x6f8c3c,roughness:1,metalness:0,side:THREE.DoubleSide,envMapIntensity:.3});
   mat.onBeforeCompile=sh=>{sh.uniforms.uW=WIND;sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nuniform float uW;').replace('#include <begin_vertex>',`#include <begin_vertex>
     vec4 ip=instanceMatrix*vec4(0,0,0,1);float sw=sin(uW*1.6+ip.x*.35+ip.z*.22)*.6+sin(uW*3.1+ip.z*.9)*.25;transformed.xz+=vec2(.8,.4)*sw*.09*position.y*position.y*12.;`)};
-  const COUNT=12000;const im=new THREE.InstancedMesh(blade,mat,COUNT);const d=new THREE.Object3D();const col=new THREE.Color();let k=0,t=0;
+  const COUNT=7000;const im=new THREE.InstancedMesh(blade,mat,COUNT);const d=new THREE.Object3D();const col=new THREE.Color();let k=0,t=0;
   im.instanceColor=new THREE.InstancedBufferAttribute(new Float32Array(COUNT*3),3);
   while(k<COUNT&&t<200000){t++;const x=(Math.random()-.5)*64,z=(Math.random()-.5)*64;if(distPath(x,z)<2.4)continue;const y=heightAt(x,z);const e=1.2;const sl=Math.abs(heightAt(x+e,z)-y)+Math.abs(heightAt(x,z+e)-y);if(sl>.55)continue;
     if(Math.hypot(x,z)<4.2&&Math.random()<.75)continue;d.position.set(x,y-.02,z);d.rotation.set(0,Math.random()*6.3,0);const s=.8+Math.random()*.6;d.scale.set(s,s*(.7+Math.random()*.7),s);d.updateMatrix();im.setMatrixAt(k,d.matrix);
@@ -138,12 +138,15 @@ function prepCharacter(g,height,opts){const root=THREE.SkeletonUtils.clone(g.sce
   const holder=new THREE.Group();holder.add(root);root.updateMatrixWorld(true);
   let maxY=0;const v=new THREE.Vector3();root.traverse(o=>{if(o.isBone){o.getWorldPosition(v);maxY=Math.max(maxY,v.y)}});const raw=(opts&&opts.raw)||(maxY>0?maxY*1.12:3.8);root.scale.setScalar(height/raw);const mixer=new THREE.AnimationMixer(root);const clips={};for(const c of g.animations)clips[c.name.split('|').pop()]=c;
   const act=n=>{const c=clips[n];return c?mixer.clipAction(c):null};MIX.push(mixer);return{holder,mixer,act,clips}}
-function loopFight(a,b){const ai=a.act('Idle'),aa=a.act('Attack'),bi=b.act('Idle'),ba=b.act('Attack');[ai,bi].forEach(x=>x&&x.play());let t=0,turn=0;
-  return dt=>{t+=dt;if(t>2.2){t=0;turn^=1;const [I,A]=turn?[ai,aa]:[bi,ba];if(A&&I){A.reset();A.setLoop(THREE.LoopOnce,1);A.clampWhenFinished=false;A.crossFadeFrom(I,.18,false);A.play();setTimeout(()=>{I.reset();I.play();I.crossFadeFrom(A,.25,false)},A.getClip().duration*1000-250)}}}}
+function loopFight(a,b){// clean idle -> attack -> idle cycle driven by the clip end, no timers
+  const mk=c=>{const I=c.act('Idle'),A=c.act('Attack');if(I){I.play()}if(A){A.setLoop(THREE.LoopOnce,1);A.clampWhenFinished=true}
+    c.mixer.addEventListener('finished',ev=>{if(ev.action===A&&I){I.reset().setEffectiveWeight(1).play();I.crossFadeFrom(A,.35,true)}});return{I,A}};
+  const x=mk(a),y=mk(b);let t=0,turn=0;
+  return dt=>{t+=dt;if(t>2.6){t=0;turn^=1;const {I,A}=turn?x:y;if(A&&I){A.reset().setEffectiveWeight(1).play();A.crossFadeFrom(I,.22,true)}}}}
 
 /* ---------- boot ---------- */
-let fight=null,mode='close',W=null,E=null;const sun=new THREE.DirectionalLight(0xfff0d8,2.1);
-(async()=>{let man={};try{man=await (await fetch(BASE+'manifest.json',{cache:'no-store'})).json()}catch(e){}
+let fight=null,mode='close',W=null,E=null,K=null,ARMY=null,MAN=null;const sun=new THREE.DirectionalLight(0xfff0d8,2.1);
+(async()=>{let man={};try{man=await (await fetch(BASE+'manifest.json',{cache:'no-store'})).json()}catch(e){}MAN=man;
   // lighting: real HDRI image-based lighting + key sun with soft shadows
   try{if(!man.hdri||!man.hdri.file)throw 0;const hdr=await loadHDR(man.hdri.file);const pm=new THREE.PMREMGenerator(renderer);const env=pm.fromEquirectangular(hdr).texture;scene.environment=env;
     scene.background=new THREE.Color(0xb7c6d3);rep('תאורת סביבה HDRI',true,man.hdri.file,man.hdri.license)}
@@ -158,27 +161,35 @@ let fight=null,mode='close',W=null,E=null;const sun=new THREE.DirectionalLight(0
   else{rep('סלעים',false,'חסר מודל סלע סרוק — לא הוצב דבר (סלעים פרוצדורליים נפסלו באיכות)',null)}
   for(const k of['tree','building'])if(!(props[k]&&props[k].file))rep(k==='tree'?'עצים':'מבנים',false,'חסר מודל — לא הוצב דבר (במקום להציב נכס מצויר)',null);
   // characters
-  try{const w=man.warrior;const g=await loadModel(w.file);W=prepCharacter(g,w.height||1.75,{raw:w.rawHeight});W.holder.position.set(-.85,heightAt(-.85,0),.2);W.holder.rotation.y=Math.PI/2-.25;scene.add(W.holder);
+  try{const w=man.warrior;const g=await loadModel(w.file);W=prepCharacter(g,w.height||1.75,{raw:w.rawHeight});W.holder.position.set(-1.15,heightAt(-1.15,.15),.15);W.holder.rotation.y=Math.atan2(2.3,-.3);scene.add(W.holder);
     const miss=['idle','attack'].filter(k=>!W.clips[(w.anims||{})[k]]);rep('לוחם',!miss.length,w.file+(miss.length?' (חסר: '+miss.join(',')+')':' · אנימציות: '+Object.keys(W.clips).join(', ')),w.license)}catch(e){rep('לוחם',false,'הקובץ לא נטען: '+(e&&e.message||e),null);console.error(e)}
   try{const en=man.enemy||{};if(en.file){const g=await loadModel(en.file);E=prepCharacter(g,en.height||1.8);rep('אויב',true,en.file,en.license)}
     else{const g=await loadModel(man.warrior.file);E=prepCharacter(g,(en.height||1.8),{raw:man.warrior.rawHeight,tint:0x5a3a3a,emis:0x220000});rep('אויב',false,'חסר מודל אויב מורשה — מוצג מציין מקום: הלוחם בצביעה כהה',null)}
-    E.holder.position.set(1.05,heightAt(1.05,-.2),-.35);E.holder.rotation.y=-Math.PI/2-.25;scene.add(E.holder)}catch(e){rep('אויב',false,'שגיאה: '+(e&&e.message||e),null);console.error(e)}
+    E.holder.position.set(1.15,heightAt(1.15,-.15),-.15);E.holder.rotation.y=Math.atan2(-2.3,.3);scene.add(E.holder)}catch(e){rep('אויב',false,'שגיאה: '+(e&&e.message||e),null);console.error(e)}
+  {const k=man.knight||{};if(k.file){try{const g=await loadModel(k.file);K=prepCharacter(g,k.height||1.85,{raw:k.rawHeight});K.holder.position.set(-3.4,heightAt(-3.4,.8),.8);K.holder.rotation.y=Math.atan2(2,-.6);scene.add(K.holder);const i=K.act((k.anims||{}).idle||'Idle');i&&i.play();rep('אביר אנושי',true,k.file,k.license)}catch(e){rep('אביר אנושי',false,'שגיאת טעינה: '+(e&&e.message||e),null)}}
+    else rep('אביר אנושי',false,'ממתין לקובץ — אביר Semi-Realistic עם Rig (ראה README)',null)}
   if(W&&E)fight=loopFight(W,E);else if(W){const i=W.act('Idle');i&&i.play()}
   hudLine();
   renderReport();$('load').remove();setMode(new URLSearchParams(location.search).get('mode')||'close')})();
 
 function hudLine(){const el=document.createElement('div');el.id='who';const w=REPORT.find(r=>r.slot==='לוחם'),e=REPORT.find(r=>r.slot==='אויב');
   el.innerHTML=(w&&w.ok?'<span class=ok>✓ לוחם: Dwarf Warrior · אנימציות אמיתיות</span>':'<span class=bad>✗ לוחם לא נטען</span>')+'<br>'+(e&&e.ok?'<span class=ok>✓ אויב נטען</span>':'<span class=bad>✗ אויב: חסר מודל — מוצג מציין מקום</span>');document.body.appendChild(el)}
-function renderReport(){const ok=REPORT.filter(r=>r.ok).length;$('rep').innerHTML='<h3>דוח נכסים · '+ok+' מתוך '+REPORT.length+' מוכנים</h3><table>'+REPORT.map(r=>'<tr><td class="'+(r.ok?'ok':'bad')+'">'+(r.ok?'✓':'✗')+' '+r.slot+'</td><td>'+r.detail+(r.lic?'<div class="lic">'+r.lic+'</div>':'')+'</td></tr>').join('')+'</table>'}
+function renderReport(){const isMiss=r=>!r.ok&&/^(חסר|ממתין)/.test(r.detail);const ok=REPORT.filter(r=>r.ok).length,miss=REPORT.filter(isMiss).length,err=REPORT.length-ok-miss;
+  $('rep').innerHTML='<h3>דוח נכסים · '+ok+' נטענו · '+miss+' לא סופקו עדיין · '+err+' שגיאות טעינה</h3><table>'+REPORT.map(r=>{const m=isMiss(r);return '<tr><td class="'+(r.ok?'ok':m?'miss':'bad')+'">'+(r.ok?'✓':m?'○':'✗')+' '+r.slot+'</td><td>'+r.detail+(r.lic?'<div class="lic">'+r.lic+'</div>':'')+'</td></tr>'}).join('')+'</table>'}
 function setMode(m){mode=m;for(const [id,k] of[['bGame','game'],['bClose','close'],['bEnemy','enemy']])$(id).classList.toggle('on',k===m)}
-$('bGame').onclick=()=>setMode('game');$('bClose').onclick=()=>setMode('close');$('bEnemy').onclick=()=>setMode('enemy');$('bRep').onclick=()=>$('rep').classList.toggle('on');
+$('bGame').onclick=()=>setMode('game');$('bClose').onclick=()=>setMode('close');$('bEnemy').onclick=()=>setMode('enemy');$('bArmy').onclick=async()=>{const b=$('bArmy');if(ARMY){ARMY.visible=!ARMY.visible;b.classList.toggle('on',ARMY.visible);if(ARMY.visible)setMode('game');return}
+  b.textContent='טוען…';const lod=(MAN.warrior.lods||[])[1]||MAN.warrior.file;const g=await loadModel(lod);ARMY=new THREE.Group();scene.add(ARMY);
+  for(let i=0;i<30;i++){const c=prepCharacter(g,MAN.warrior.height||1.75,{raw:MAN.warrior.rawHeight});const r=Math.floor(i/6),q=i%6;const x=(q-2.5)*1.55,z=-3.2-r*1.55;c.holder.position.set(x,heightAt(x,z),z);c.holder.rotation.y=Math.PI;
+    c.holder.traverse(o=>{if(o.isMesh)o.castShadow=i<12});const a=c.act('Idle');if(a){a.play();a.time=Math.random()*2}ARMY.add(c.holder)}
+  b.textContent='צבא ×30 (LOD 5.4K)';b.classList.add('on');setMode('game')};
+$('bRep').onclick=()=>$('rep').classList.toggle('on');
 if(/[?&]rep/.test(location.search))$('rep').classList.add('on');
 const q=new URLSearchParams(location.search);if(q.get('mode'))setTimeout(()=>setMode(q.get('mode')),0);
 let last=performance.now(),orbit=0,fpsN=0,fpsT=0,fps=0;const tgt=new THREE.Vector3(),cpos=new THREE.Vector3();
 function frame(now){requestAnimationFrame(frame);const dt=Math.min(.05,(now-last)/1000);last=now;WIND.value=now/1000;for(const m of MIX)m.update(dt);if(fight)fight(dt);
   orbit+=dt*.18;const fixed=q.get('t');if(fixed!=null)orbit=+fixed;
-  if(mode==='game'){tgt.set(0,0,0);cpos.set(0,9.2,7.2)}
-  else{const who=mode==='enemy'&&E?E:W;const p=who?who.holder.position:new THREE.Vector3();const a=(mode==='enemy'?-.9:.9)+orbit;tgt.set(p.x,p.y+.95,p.z);cpos.set(p.x+Math.sin(a)*3.4,p.y+1.55,p.z+Math.cos(a)*3.4)}
+  if(mode==='game'){if(ARMY&&ARMY.visible){tgt.set(0,0,-4.5);cpos.set(0,13.5,8.5)}else{tgt.set(0,0,0);cpos.set(0,9.2,7.2)}}
+  else{const who=mode==='enemy'&&E?E:W;const p=who?who.holder.position:new THREE.Vector3();const face=who?who.holder.rotation.y:0;const a=face+(mode==='enemy'?-1:1)*(1.05+Math.sin(orbit*1.6)*.75);tgt.set(p.x,p.y+.95,p.z);cpos.set(p.x+Math.sin(a)*3.7,p.y+1.6,p.z+Math.cos(a)*3.7)}
   camera.position.lerp(cpos,mode==='game'?1:Math.min(1,dt*3+.02));camera.lookAt(tgt);sun.target.position.set(tgt.x,0,tgt.z);sun.position.set(tgt.x-14,26,tgt.z+12);
   renderer.render(scene,camera);fpsN++;fpsT+=dt;if(fpsT>1){fps=fpsN/fpsT;fpsN=0;fpsT=0;const i=renderer.info.render;$('stat').textContent=fps.toFixed(0)+' fps · '+i.calls+' calls · '+(i.triangles/1000).toFixed(0)+'k tris'}}
 requestAnimationFrame(frame);
